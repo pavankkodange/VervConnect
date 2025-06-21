@@ -1,0 +1,215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light and bright background */
+body {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #f8fafc 50%, #f1f5f9 75%, #e2e8f0 100%);
+  min-height: 100vh;
+}
+
+/* Custom scrollbar with bright blue tones */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(248, 250, 252, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.8);
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 768px) {
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Ensure minimum touch target size */
+  button, .touch-manipulation {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve text readability on mobile */
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Better form inputs on mobile */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Bright and welcoming utilities */
+@layer utilities {
+  .bg-bright-25 {
+    background-color: #fefefe;
+  }
+  
+  .bg-bright-50 {
+    background-color: #f9fafb;
+  }
+  
+  .bg-bright-100 {
+    background-color: #f3f4f6;
+  }
+  
+  .text-bright-600 {
+    color: #4b5563;
+  }
+  
+  .text-bright-700 {
+    color: #374151;
+  }
+  
+  .text-bright-800 {
+    color: #1f2937;
+  }
+  
+  .border-bright-100 {
+    border-color: #f3f4f6;
+  }
+  
+  .border-bright-200 {
+    border-color: #e5e7eb;
+  }
+  
+  .hover\:bg-bright-50:hover {
+    background-color: #f9fafb;
+  }
+  
+  .hover\:bg-bright-100:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(229, 231, 235, 0.3);
+  }
+  
+  .bright-glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(229, 231, 235, 0.3);
+  }
+  
+  .sky-gradient {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #bae6fd 50%, #7dd3fc 75%, #38bdf8 100%);
+  }
+  
+  .bright-gradient {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 25%, #f1f5f9 50%, #e2e8f0 75%, #cbd5e1 100%);
+  }
+  
+  .bright-sky-gradient {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 25%, #f8fafc 50%, #e0f2fe 75%, #f1f5f9 100%);
+  }
+  
+  /* Mobile-specific responsive utilities */
+  .mobile-padding {
+    @apply px-4 lg:px-6;
+  }
+  
+  .mobile-text {
+    @apply text-sm lg:text-base;
+  }
+  
+  .mobile-heading {
+    @apply text-xl lg:text-2xl;
+  }
+  
+  .mobile-large-heading {
+    @apply text-2xl lg:text-3xl;
+  }
+  
+  /* Responsive grid utilities */
+  .mobile-grid-1 {
+    @apply grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+  }
+  
+  .mobile-grid-2 {
+    @apply grid-cols-2 lg:grid-cols-4;
+  }
+  
+  /* Safe area for mobile devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Animation keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.5); }
+}
+
+@keyframes bright-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.5); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-bright-pulse {
+  animation: bright-pulse 2s ease-in-out infinite;
+}
+
+/* Mobile-specific animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-pulse-glow,
+  .animate-bright-pulse {
+    animation: none;
+  }
+}
+
+/* Improved focus states for accessibility */
+@layer base {
+  *:focus {
+    outline: 2px solid theme('colors.blue.500');
+    outline-offset: 2px;
+  }
+  
+  button:focus,
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid theme('colors.blue.500');
+    outline-offset: 2px;
+  }
+}
+
+/* Light mode optimized for mobile devices */
+@media (prefers-color-scheme: light) {
+  .bright-glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(229, 231, 235, 0.3);
+  }
+}
