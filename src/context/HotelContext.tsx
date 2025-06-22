@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Room, Guest, Booking, BanquetHall, BanquetBooking, RestaurantTable, TableReservation, RoomCharge, RoomServiceOrder } from '../types';
+import { Room, Guest, Booking, BanquetHall, BanquetBooking, RestaurantTable, TableReservation, RoomCharge, RoomServiceOrder, BanquetAmenity } from '../types';
 
 interface HotelContextType {
   // Rooms
@@ -27,6 +27,13 @@ interface HotelContextType {
   addBanquetHall: (hall: Omit<BanquetHall, 'id'>) => void;
   updateBanquetHall: (hallId: string, hall: Omit<BanquetHall, 'id'>) => void;
   deleteBanquetHall: (hallId: string) => void;
+  
+  // Banquet Amenities
+  banquetAmenities: BanquetAmenity[];
+  addBanquetAmenity: (amenity: Omit<BanquetAmenity, 'id' | 'createdAt'>) => void;
+  updateBanquetAmenity: (amenityId: string, amenity: Partial<BanquetAmenity>) => void;
+  deleteBanquetAmenity: (amenityId: string) => void;
+  toggleAmenityStatus: (amenityId: string) => void;
   
   // Restaurant
   restaurantTables: RestaurantTable[];
@@ -538,6 +545,142 @@ const DEMO_BOOKINGS: Booking[] = [
   }
 ];
 
+// Default banquet amenities
+const DEMO_BANQUET_AMENITIES: BanquetAmenity[] = [
+  {
+    id: '1',
+    name: 'Audio System',
+    description: 'Professional sound system with microphones and speakers',
+    category: 'audio-visual',
+    icon: 'volume-2',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '2',
+    name: 'Stage',
+    description: 'Elevated platform for presentations and performances',
+    category: 'staging',
+    icon: 'square',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '3',
+    name: 'Lighting',
+    description: 'Professional lighting setup with dimming controls',
+    category: 'lighting',
+    icon: 'lightbulb',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '4',
+    name: 'Dance Floor',
+    description: 'Polished wooden dance floor area',
+    category: 'furniture',
+    icon: 'music',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '5',
+    name: 'Catering',
+    description: 'Full catering service with professional staff',
+    category: 'catering',
+    icon: 'utensils',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '6',
+    name: 'Photography',
+    description: 'Professional photography and videography services',
+    category: 'service',
+    icon: 'camera',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '7',
+    name: 'Decorations',
+    description: 'Event decoration and floral arrangements',
+    category: 'decoration',
+    icon: 'flower',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '8',
+    name: 'Parking',
+    description: 'Dedicated parking spaces for event guests',
+    category: 'service',
+    icon: 'car',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '9',
+    name: 'Projector',
+    description: 'High-definition projector with screen',
+    category: 'audio-visual',
+    icon: 'projector',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '10',
+    name: 'Air Conditioning',
+    description: 'Climate control system for guest comfort',
+    category: 'technology',
+    icon: 'wind',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '11',
+    name: 'WiFi',
+    description: 'High-speed wireless internet access',
+    category: 'technology',
+    icon: 'wifi',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  },
+  {
+    id: '12',
+    name: 'Bar Setup',
+    description: 'Professional bar service with bartender',
+    category: 'catering',
+    icon: 'wine',
+    isDefault: true,
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    createdBy: 'system'
+  }
+];
+
 const DEMO_BANQUET_HALLS: BanquetHall[] = [
   { 
     id: '1', 
@@ -562,7 +705,7 @@ const DEMO_BANQUET_HALLS: BanquetHall[] = [
       'https://images.pexels.com/photos/2306281/pexels-photo-2306281.jpeg',
       'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg'
     ], 
-    amenities: ['Outdoor Setting', 'Garden View', 'Natural Lighting', 'Catering', 'Photography']
+    amenities: ['Decorations', 'Catering', 'Photography']
   },
   {
     id: '3',
@@ -586,7 +729,7 @@ const DEMO_BANQUET_HALLS: BanquetHall[] = [
       'https://images.pexels.com/photos/1385472/pexels-photo-1385472.jpeg',
       'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg'
     ],
-    amenities: ['City View', 'Outdoor Setting', 'Bar Setup', 'Lighting', 'Catering', 'Photography', 'Weather Protection']
+    amenities: ['Bar Setup', 'Lighting', 'Catering', 'Photography']
   },
   {
     id: '5',
@@ -597,7 +740,7 @@ const DEMO_BANQUET_HALLS: BanquetHall[] = [
       'https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg',
       'https://images.pexels.com/photos/2306281/pexels-photo-2306281.jpeg'
     ],
-    amenities: ['Private Dining', 'Elegant Decor', 'Audio System', 'Catering', 'Wine Service']
+    amenities: ['Audio System', 'Catering']
   }
 ];
 
@@ -662,6 +805,7 @@ export function HotelProvider({ children }: { children: ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>(DEMO_BOOKINGS);
   const [banquetHalls, setBanquetHalls] = useState<BanquetHall[]>(DEMO_BANQUET_HALLS);
   const [banquetBookings, setBanquetBookings] = useState<BanquetBooking[]>(DEMO_BANQUET_BOOKINGS);
+  const [banquetAmenities, setBanquetAmenities] = useState<BanquetAmenity[]>(DEMO_BANQUET_AMENITIES);
   const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>(DEMO_RESTAURANT_TABLES);
   const [tableReservations, setTableReservations] = useState<TableReservation[]>(DEMO_TABLE_RESERVATIONS);
   const [roomServiceOrders, setRoomServiceOrders] = useState<RoomServiceOrder[]>([]);
@@ -761,6 +905,46 @@ export function HotelProvider({ children }: { children: ReactNode }) {
     setBanquetHalls(prev => prev.filter(hall => hall.id !== hallId));
   };
 
+  // Banquet Amenities Management
+  const addBanquetAmenity = (amenityData: Omit<BanquetAmenity, 'id' | 'createdAt'>) => {
+    const newAmenity: BanquetAmenity = {
+      ...amenityData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    setBanquetAmenities(prev => [...prev, newAmenity]);
+  };
+
+  const updateBanquetAmenity = (amenityId: string, amenityData: Partial<BanquetAmenity>) => {
+    setBanquetAmenities(prev => prev.map(amenity => 
+      amenity.id === amenityId 
+        ? { 
+            ...amenity, 
+            ...amenityData, 
+            lastModified: new Date().toISOString(),
+            modifiedBy: 'admin' // In a real app, this would be the current user
+          } 
+        : amenity
+    ));
+  };
+
+  const deleteBanquetAmenity = (amenityId: string) => {
+    setBanquetAmenities(prev => prev.filter(amenity => amenity.id !== amenityId));
+  };
+
+  const toggleAmenityStatus = (amenityId: string) => {
+    setBanquetAmenities(prev => prev.map(amenity => 
+      amenity.id === amenityId 
+        ? { 
+            ...amenity, 
+            isActive: !amenity.isActive,
+            lastModified: new Date().toISOString(),
+            modifiedBy: 'admin'
+          } 
+        : amenity
+    ));
+  };
+
   const updateTableStatus = (tableId: string, status: RestaurantTable['status']) => {
     setRestaurantTables(prev => prev.map(table => 
       table.id === tableId ? { ...table, status } : table
@@ -827,6 +1011,11 @@ export function HotelProvider({ children }: { children: ReactNode }) {
       addBanquetHall,
       updateBanquetHall,
       deleteBanquetHall,
+      banquetAmenities,
+      addBanquetAmenity,
+      updateBanquetAmenity,
+      deleteBanquetAmenity,
+      toggleAmenityStatus,
       restaurantTables,
       tableReservations,
       updateTableStatus,

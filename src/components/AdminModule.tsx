@@ -31,9 +31,21 @@ import {
   Music,
   Clock,
   Calendar,
-  FileImage,
-  FileText,
-  Image as ImageIcon
+  X,
+  Search,
+  Filter,
+  ToggleLeft,
+  ToggleRight,
+  Volume2,
+  Square,
+  Lightbulb,
+  Flower,
+  Car,
+  Projector,
+  Wind,
+  Wifi,
+  Wine,
+  Tag
 } from 'lucide-react';
 
 export function AdminModule() {
@@ -48,6 +60,11 @@ export function AdminModule() {
     addBanquetHall, 
     updateBanquetHall, 
     deleteBanquetHall, 
+    banquetAmenities,
+    addBanquetAmenity,
+    updateBanquetAmenity,
+    deleteBanquetAmenity,
+    toggleAmenityStatus,
     restaurantTables, 
     addRestaurantTable, 
     updateRestaurantTable, 
@@ -55,17 +72,21 @@ export function AdminModule() {
   } = useHotel();
   const { hotelSettings, updateHotelSettings, currencies } = useCurrency();
   
-  const [activeTab, setActiveTab] = useState<'users' | 'branding' | 'rooms' | 'banquet' | 'restaurant' | 'shifts' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'branding' | 'rooms' | 'banquet' | 'amenities' | 'restaurant' | 'shifts' | 'settings'>('users');
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showRoomForm, setShowRoomForm] = useState(false);
   const [editingRoom, setEditingRoom] = useState<any>(null);
   const [showBanquetForm, setShowBanquetForm] = useState(false);
   const [editingBanquet, setEditingBanquet] = useState<any>(null);
+  const [showAmenityForm, setShowAmenityForm] = useState(false);
+  const [editingAmenity, setEditingAmenity] = useState<any>(null);
   const [showTableForm, setShowTableForm] = useState(false);
   const [editingTable, setEditingTable] = useState<any>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [amenitySearchTerm, setAmenitySearchTerm] = useState('');
+  const [amenityFilter, setAmenityFilter] = useState<string>('');
 
   // Auto-save functionality
   const handleSave = async () => {
@@ -102,6 +123,7 @@ export function AdminModule() {
       users: users.map(u => ({ ...u, password: undefined })), // Remove passwords
       rooms,
       banquetHalls,
+      banquetAmenities,
       restaurantTables,
       exportedAt: new Date().toISOString(),
       version: '1.0'
@@ -141,159 +163,208 @@ export function AdminModule() {
     }
   };
 
-  // Document upload handler for room and banquet hall photos
-  const handleImageUpload = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        resolve(dataUrl);
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
+  // Get icon component by name
+  const getAmenityIcon = (iconName: string) => {
+    const iconMap: Record<string, React.ElementType> = {
+      'volume-2': Volume2,
+      'square': Square,
+      'lightbulb': Lightbulb,
+      'music': Music,
+      'utensils': Utensils,
+      'camera': Camera,
+      'flower': Flower,
+      'car': Car,
+      'projector': Projector,
+      'wind': Wind,
+      'wifi': Wifi,
+      'wine': Wine,
+      'tag': Tag,
+      'star': Star,
+      'settings': Settings
+    };
+    
+    const IconComponent = iconMap[iconName] || Tag;
+    return <IconComponent className="w-5 h-5" />;
+  };
+
+  // Filter amenities based on search and category
+  const filteredAmenities = banquetAmenities.filter(amenity => {
+    const matchesSearch = !amenitySearchTerm || 
+      amenity.name.toLowerCase().includes(amenitySearchTerm.toLowerCase()) ||
+      amenity.description?.toLowerCase().includes(amenitySearchTerm.toLowerCase());
+    const matchesCategory = !amenityFilter || amenity.category === amenityFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const AmenityForm = () => {
+    const [formData, setFormData] = useState({
+      name: editingAmenity?.name || '',
+      description: editingAmenity?.description || '',
+      category: editingAmenity?.category || 'other',
+      icon: editingAmenity?.icon || 'tag',
+      isActive: editingAmenity?.isActive ?? true
     });
-  };
 
-  // Image type validator
-  const isValidImageFile = (file: File): boolean => {
-    const validTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'
+    const categories = [
+      { value: 'audio-visual', label: 'Audio Visual' },
+      { value: 'catering', label: 'Catering' },
+      { value: 'decoration', label: 'Decoration' },
+      { value: 'furniture', label: 'Furniture' },
+      { value: 'lighting', label: 'Lighting' },
+      { value: 'staging', label: 'Staging' },
+      { value: 'technology', label: 'Technology' },
+      { value: 'service', label: 'Service' },
+      { value: 'other', label: 'Other' }
     ];
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    return validTypes.includes(file.type) && file.size <= maxSize;
-  };
 
-  // Image Gallery Component for rooms and banquet halls
-  const ImageGallery = ({ 
-    images, 
-    onAdd, 
-    onRemove, 
-    title = "Photos",
-    maxImages = 5 
-  }: {
-    images: string[];
-    onAdd: (imageUrl: string) => void;
-    onRemove: (index: number) => void;
-    title?: string;
-    maxImages?: number;
-  }) => {
-    const [uploadingImage, setUploadingImage] = useState(false);
+    const iconOptions = [
+      { value: 'volume-2', label: 'Audio System' },
+      { value: 'square', label: 'Stage' },
+      { value: 'lightbulb', label: 'Lighting' },
+      { value: 'music', label: 'Music/Dance' },
+      { value: 'utensils', label: 'Catering' },
+      { value: 'camera', label: 'Photography' },
+      { value: 'flower', label: 'Decoration' },
+      { value: 'car', label: 'Parking' },
+      { value: 'projector', label: 'Projector' },
+      { value: 'wind', label: 'Air Conditioning' },
+      { value: 'wifi', label: 'WiFi' },
+      { value: 'wine', label: 'Bar/Drinks' },
+      { value: 'star', label: 'Premium' },
+      { value: 'settings', label: 'Equipment' },
+      { value: 'tag', label: 'General' }
+    ];
 
-    const handleImageFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        if (images.length >= maxImages) {
-          alert(`Maximum ${maxImages} images allowed`);
-          return;
-        }
-        
-        if (!isValidImageFile(file)) {
-          alert('Please upload a valid image (JPG, PNG, GIF, WebP) under 5MB');
-          return;
-        }
-        
-        setUploadingImage(true);
-        try {
-          const imageUrl = await handleImageUpload(file);
-          onAdd(imageUrl);
-        } catch (error) {
-          alert('Failed to upload image');
-        } finally {
-          setUploadingImage(false);
-        }
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      if (editingAmenity) {
+        updateBanquetAmenity(editingAmenity.id, {
+          ...formData,
+          modifiedBy: 'admin'
+        });
+      } else {
+        addBanquetAmenity({
+          ...formData,
+          isDefault: false,
+          createdBy: 'admin'
+        });
       }
+      
+      setShowAmenityForm(false);
+      setEditingAmenity(null);
+      handleSave();
     };
 
     return (
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-4">{title}</label>
-        
-        {/* Current Images */}
-        {images.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
-            {images.map((image, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={image}
-                  alt={`Image ${index + 1}`}
-                  className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://via.placeholder.com/150?text=Image+Error';
-                  }}
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    className="opacity-0 group-hover:opacity-100 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all duration-200"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full m-4">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold">
+              {editingAmenity ? 'Edit Amenity' : 'Add New Amenity'}
+            </h3>
+            <button
+              onClick={() => {
+                setShowAmenityForm(false);
+                setEditingAmenity(null);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        )}
 
-        {/* Add Image */}
-        {images.length < maxImages && (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-            <div className="text-center">
-              <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 mb-2">Upload Images</p>
-              <p className="text-xs text-gray-500 mb-4">
-                {images.length}/{maxImages} images • Max 5MB • Supported: JPG, PNG, GIF, WebP
-              </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Amenity Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g., Professional Sound System"
+                required
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageFileUpload}
-                disabled={uploadingImage}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                rows={3}
+                placeholder="Brief description of the amenity..."
               />
-              {uploadingImage && (
-                <p className="text-sm text-blue-600 mt-1 flex items-center">
-                  <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                  Uploading image...
-                </p>
-              )}
             </div>
 
-            <div className="mt-4 text-xs text-gray-500">
-              <p>You can also use external image URLs from services like Pexels or Unsplash.</p>
-              <div className="mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Add Image URL</label>
-                <div className="flex space-x-2">
-                  <input
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      const input = (e.target as HTMLButtonElement).previousElementSibling as HTMLInputElement;
-                      if (input.value && input.validity.valid) {
-                        onAdd(input.value);
-                        input.value = '';
-                      } else {
-                        alert('Please enter a valid image URL');
-                      }
-                    }}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                  >
-                    Add
-                  </button>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              >
+                {categories.map(category => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Icon</label>
+              <select
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              >
+                {iconOptions.map(icon => (
+                  <option key={icon.value} value={icon.value}>
+                    {icon.label}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-2 flex items-center space-x-2 text-sm text-gray-600">
+                <span>Preview:</span>
+                {getAmenityIcon(formData.icon)}
+                <span>{formData.name || 'Amenity Name'}</span>
               </div>
             </div>
-          </div>
-        )}
+
+            <div>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Active</span>
+              </label>
+            </div>
+
+            <div className="flex space-x-4 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAmenityForm(false);
+                  setEditingAmenity(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                {editingAmenity ? 'Update' : 'Create'} Amenity
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     );
   };
@@ -414,18 +485,8 @@ export function AdminModule() {
       view: editingRoom?.view || 'City',
       smokingAllowed: editingRoom?.smokingAllowed || false,
       amenities: editingRoom?.amenities || ['WiFi', 'AC', 'TV'],
-      photos: editingRoom?.photos || []
+      photos: editingRoom?.photos || ['https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg']
     });
-
-    const handleAddPhoto = (photoUrl: string) => {
-      setFormData({ ...formData, photos: [...formData.photos, photoUrl] });
-    };
-
-    const handleRemovePhoto = (index: number) => {
-      const updatedPhotos = [...formData.photos];
-      updatedPhotos.splice(index, 1);
-      setFormData({ ...formData, photos: updatedPhotos });
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -559,17 +620,6 @@ export function AdminModule() {
                 <span className="text-sm font-medium text-gray-700">Smoking Allowed</span>
               </label>
             </div>
-
-            {/* Room Photos */}
-            <div className="mt-6">
-              <ImageGallery
-                images={formData.photos}
-                onAdd={handleAddPhoto}
-                onRemove={handleRemovePhoto}
-                title="Room Photos"
-                maxImages={10}
-              />
-            </div>
             
             <div className="flex space-x-4 pt-4">
               <button
@@ -600,18 +650,17 @@ export function AdminModule() {
       name: editingBanquet?.name || '',
       capacity: editingBanquet?.capacity || 50,
       rate: editingBanquet?.rate || 200,
-      amenities: editingBanquet?.amenities || ['Audio System', 'Lighting', 'Catering'],
-      photos: editingBanquet?.photos || []
+      amenities: editingBanquet?.amenities || [],
+      photos: editingBanquet?.photos || ['https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg']
     });
 
-    const handleAddPhoto = (photoUrl: string) => {
-      setFormData({ ...formData, photos: [...formData.photos, photoUrl] });
-    };
-
-    const handleRemovePhoto = (index: number) => {
-      const updatedPhotos = [...formData.photos];
-      updatedPhotos.splice(index, 1);
-      setFormData({ ...formData, photos: updatedPhotos });
+    const handleAmenityToggle = (amenityName: string) => {
+      setFormData(prev => ({
+        ...prev,
+        amenities: prev.amenities.includes(amenityName)
+          ? prev.amenities.filter(a => a !== amenityName)
+          : [...prev.amenities, amenityName]
+      }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -631,50 +680,66 @@ export function AdminModule() {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 max-w-2xl w-full m-4 max-h-[90vh] overflow-y-auto">
           <h3 className="text-2xl font-bold mb-6">{editingBanquet ? 'Edit Banquet Hall' : 'Add New Banquet Hall'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Hall Name</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
-              <input
-                type="number"
-                value={formData.capacity}
-                onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 50 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                min="1"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rate per Hour</label>
-              <input
-                type="number"
-                value={formData.rate}
-                onChange={(e) => setFormData({ ...formData, rate: parseFloat(e.target.value) || 200 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                min="0"
-                step="0.01"
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Hall Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
+                <input
+                  type="number"
+                  value={formData.capacity}
+                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 50 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  min="1"
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rate per Hour</label>
+                <input
+                  type="number"
+                  value={formData.rate}
+                  onChange={(e) => setFormData({ ...formData, rate: parseFloat(e.target.value) || 200 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
             </div>
 
-            {/* Banquet Hall Photos */}
-            <div className="mt-6">
-              <ImageGallery
-                images={formData.photos}
-                onAdd={handleAddPhoto}
-                onRemove={handleRemovePhoto}
-                title="Banquet Hall Photos"
-                maxImages={10}
-              />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">Available Amenities</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                {banquetAmenities
+                  .filter(amenity => amenity.isActive)
+                  .map((amenity) => (
+                    <label key={amenity.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.amenities.includes(amenity.name)}
+                        onChange={() => handleAmenityToggle(amenity.name)}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        {getAmenityIcon(amenity.icon || 'tag')}
+                        <span className="text-sm font-medium text-gray-700 truncate">{amenity.name}</span>
+                      </div>
+                    </label>
+                  ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Selected: {formData.amenities.length} amenities
+              </p>
             </div>
             
             <div className="flex space-x-4 pt-4">
@@ -793,6 +858,7 @@ export function AdminModule() {
               { id: 'branding', name: 'Hotel Branding', icon: Palette },
               { id: 'rooms', name: 'Room Management', icon: Bed },
               { id: 'banquet', name: 'Banquet Halls', icon: MapPin },
+              { id: 'amenities', name: 'Amenities', icon: Star },
               { id: 'restaurant', name: 'Restaurant Tables', icon: Utensils },
               { id: 'settings', name: 'System Settings', icon: Database }
             ].map((tab) => {
@@ -963,7 +1029,6 @@ export function AdminModule() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photos</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -1000,28 +1065,6 @@ export function AdminModule() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>{room.maxOccupancy} guests • {room.size}m² • {room.bedType}</div>
                       <div>{room.view} view • {room.smokingAllowed ? 'Smoking' : 'Non-smoking'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1">
-                        {room.photos && room.photos.length > 0 ? (
-                          <>
-                            <div className="w-8 h-8 rounded-md overflow-hidden">
-                              <img 
-                                src={room.photos[0]}
-                                alt={`Room ${room.number}`}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = 'https://via.placeholder.com/150?text=No+Image';
-                                }}
-                              />
-                            </div>
-                            <span className="text-xs text-gray-500">{room.photos.length} photos</span>
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-500">No photos</span>
-                        )}
-                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
@@ -1079,7 +1122,6 @@ export function AdminModule() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amenities</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photos</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -1102,37 +1144,19 @@ export function AdminModule() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex flex-wrap gap-1">
-                        {hall.amenities.slice(0, 3).map((amenity, index) => (
-                          <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                            {amenity}
-                          </span>
-                        ))}
+                        {hall.amenities.slice(0, 3).map((amenityName, index) => {
+                          const amenity = banquetAmenities.find(a => a.name === amenityName);
+                          return (
+                            <span key={index} className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                              {amenity && getAmenityIcon(amenity.icon || 'tag')}
+                              <span>{amenityName}</span>
+                            </span>
+                          );
+                        })}
                         {hall.amenities.length > 3 && (
                           <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
                             +{hall.amenities.length - 3} more
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1">
-                        {hall.photos && hall.photos.length > 0 ? (
-                          <>
-                            <div className="w-8 h-8 rounded-md overflow-hidden">
-                              <img 
-                                src={hall.photos[0]}
-                                alt={hall.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = 'https://via.placeholder.com/150?text=No+Image';
-                                }}
-                              />
-                            </div>
-                            <span className="text-xs text-gray-500">{hall.photos.length} photos</span>
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-500">No photos</span>
                         )}
                       </div>
                     </td>
@@ -1165,6 +1189,151 @@ export function AdminModule() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Amenities Management Tab */}
+      {activeTab === 'amenities' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Banquet Amenities Management</h3>
+              <button
+                onClick={() => setShowAmenityForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Amenity</span>
+              </button>
+            </div>
+            
+            {/* Search and Filter */}
+            <div className="flex items-center space-x-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search amenities..."
+                  value={amenitySearchTerm}
+                  onChange={(e) => setAmenitySearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <select
+                value={amenityFilter}
+                onChange={(e) => setAmenityFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">All Categories</option>
+                <option value="audio-visual">Audio Visual</option>
+                <option value="catering">Catering</option>
+                <option value="decoration">Decoration</option>
+                <option value="furniture">Furniture</option>
+                <option value="lighting">Lighting</option>
+                <option value="staging">Staging</option>
+                <option value="technology">Technology</option>
+                <option value="service">Service</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amenity</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAmenities.map((amenity) => (
+                  <tr key={amenity.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 mr-3">
+                          {getAmenityIcon(amenity.icon || 'tag')}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{amenity.name}</div>
+                          {amenity.description && (
+                            <div className="text-sm text-gray-500 truncate max-w-xs">{amenity.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                        {amenity.category.replace('-', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        amenity.isDefault ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {amenity.isDefault ? 'Default' : 'Custom'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => {
+                          toggleAmenityStatus(amenity.id);
+                          handleSave();
+                        }}
+                        className="flex items-center"
+                      >
+                        {amenity.isActive ? (
+                          <ToggleRight className="w-8 h-8 text-green-500 hover:text-green-600" />
+                        ) : (
+                          <ToggleLeft className="w-8 h-8 text-gray-400 hover:text-gray-500" />
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(amenity.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            setEditingAmenity(amenity);
+                            setShowAmenityForm(true);
+                          }}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        {!amenity.isDefault && (
+                          <button
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this amenity?')) {
+                                deleteBanquetAmenity(amenity.id);
+                                handleSave();
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredAmenities.length === 0 && (
+            <div className="p-12 text-center">
+              <Star className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No amenities found matching your criteria</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -1382,6 +1551,7 @@ export function AdminModule() {
       {showUserForm && <UserForm />}
       {showRoomForm && <RoomForm />}
       {showBanquetForm && <BanquetForm />}
+      {showAmenityForm && <AmenityForm />}
     </div>
   );
 }

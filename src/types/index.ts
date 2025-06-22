@@ -266,6 +266,21 @@ export interface BanquetHall {
   cancellationPolicy?: string;
 }
 
+// Banquet Amenity Management
+export interface BanquetAmenity {
+  id: string;
+  name: string;
+  description?: string;
+  category: 'audio-visual' | 'catering' | 'decoration' | 'furniture' | 'lighting' | 'staging' | 'technology' | 'service' | 'other';
+  icon?: string;
+  isDefault: boolean; // Whether this is a default amenity or custom
+  isActive: boolean;
+  createdAt: string;
+  createdBy: string;
+  lastModified?: string;
+  modifiedBy?: string;
+}
+
 export interface BanquetBooking {
   id: string;
   hallId: string;
