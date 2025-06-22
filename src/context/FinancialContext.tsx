@@ -38,18 +38,22 @@ interface FinancialContextType {
 
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
-// Enhanced demo data with more realistic invoices
+// Get current year for realistic demo data
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth() + 1;
+
+// Enhanced demo data with current year dates
 const DEMO_INVOICES: Invoice[] = [
   {
     id: '1',
-    invoiceNumber: 'INV-2024-001',
+    invoiceNumber: `INV-${currentYear}-001`,
     bookingId: '1',
     guestId: '1',
     clientName: 'John Doe',
     clientEmail: 'john@email.com',
     clientAddress: '123 Main Street, New York, NY 10001, USA',
-    issueDate: '2024-01-22',
-    dueDate: '2024-02-22',
+    issueDate: `${currentYear}-01-22`,
+    dueDate: `${currentYear}-02-22`,
     items: [
       {
         id: '1',
@@ -59,7 +63,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 450,
         taxRate: 0.1,
         category: 'accommodation',
-        date: '2024-01-22'
+        date: `${currentYear}-01-22`
       },
       {
         id: '2',
@@ -69,7 +73,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 85,
         taxRate: 0.1,
         category: 'room-service',
-        date: '2024-01-23'
+        date: `${currentYear}-01-23`
       },
       {
         id: '3',
@@ -79,7 +83,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 120,
         taxRate: 0.1,
         category: 'restaurant',
-        date: '2024-01-23'
+        date: `${currentYear}-01-23`
       }
     ],
     subtotal: 655,
@@ -89,7 +93,7 @@ const DEMO_INVOICES: Invoice[] = [
     currency: 'USD',
     status: 'paid',
     paymentMethod: 'card',
-    paymentDate: '2024-01-25',
+    paymentDate: `${currentYear}-01-25`,
     paymentReference: 'CARD-001',
     createdBy: '1',
     remindersSent: 0,
@@ -98,14 +102,14 @@ const DEMO_INVOICES: Invoice[] = [
   },
   {
     id: '2',
-    invoiceNumber: 'INV-2024-002',
+    invoiceNumber: `INV-${currentYear}-002`,
     bookingId: '2',
     guestId: '2',
     clientName: 'Jane Smith',
     clientEmail: 'jane@email.com',
     clientAddress: '456 Oak Avenue, London, UK',
-    issueDate: '2024-01-20',
-    dueDate: '2024-02-20',
+    issueDate: `${currentYear}-01-20`,
+    dueDate: `${currentYear}-02-20`,
     items: [
       {
         id: '1',
@@ -115,7 +119,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 800,
         taxRate: 0.1,
         category: 'accommodation',
-        date: '2024-01-20'
+        date: `${currentYear}-01-20`
       },
       {
         id: '2',
@@ -125,7 +129,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 200,
         taxRate: 0.1,
         category: 'spa',
-        date: '2024-01-21'
+        date: `${currentYear}-01-21`
       }
     ],
     subtotal: 1000,
@@ -135,7 +139,7 @@ const DEMO_INVOICES: Invoice[] = [
     currency: 'USD',
     status: 'paid',
     paymentMethod: 'card',
-    paymentDate: '2024-01-22',
+    paymentDate: `${currentYear}-01-22`,
     paymentReference: 'CARD-002',
     createdBy: '1',
     remindersSent: 0,
@@ -144,13 +148,13 @@ const DEMO_INVOICES: Invoice[] = [
   },
   {
     id: '3',
-    invoiceNumber: 'INV-2024-003',
+    invoiceNumber: `INV-${currentYear}-003`,
     guestId: '3',
     clientName: 'Corporate Event - Johnson Wedding',
     clientEmail: 'robert@email.com',
     clientAddress: '789 Event Plaza, Chicago, IL 60601, USA',
-    issueDate: '2024-01-15',
-    dueDate: '2024-02-14',
+    issueDate: `${currentYear}-01-15`,
+    dueDate: `${currentYear}-02-14`,
     items: [
       {
         id: '1',
@@ -160,7 +164,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 2500,
         taxRate: 0.1,
         category: 'banquet',
-        date: '2024-02-14'
+        date: `${currentYear}-02-14`
       },
       {
         id: '2',
@@ -170,7 +174,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 6750,
         taxRate: 0.1,
         category: 'catering',
-        date: '2024-02-14'
+        date: `${currentYear}-02-14`
       },
       {
         id: '3',
@@ -180,7 +184,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 800,
         taxRate: 0.1,
         category: 'equipment',
-        date: '2024-02-14'
+        date: `${currentYear}-02-14`
       }
     ],
     subtotal: 10050,
@@ -191,19 +195,19 @@ const DEMO_INVOICES: Invoice[] = [
     status: 'sent',
     createdBy: '1',
     remindersSent: 1,
-    lastReminderDate: '2024-01-30',
+    lastReminderDate: `${currentYear}-01-30`,
     notes: 'Wedding event - early booking discount applied',
     terms: 'Payment due 30 days from invoice date'
   },
   {
     id: '4',
-    invoiceNumber: 'INV-2024-004',
+    invoiceNumber: `INV-${currentYear}-004`,
     guestId: '4',
     clientName: 'Alexander Blackwood',
     clientEmail: 'alex.blackwood@luxurygroup.com',
     clientAddress: '1 Park Avenue, New York, NY 10016, USA',
-    issueDate: '2024-01-18',
-    dueDate: '2024-02-18',
+    issueDate: `${currentYear}-01-18`,
+    dueDate: `${currentYear}-02-18`,
     items: [
       {
         id: '1',
@@ -213,7 +217,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 2200,
         taxRate: 0.1,
         category: 'accommodation',
-        date: '2024-01-18'
+        date: `${currentYear}-01-18`
       },
       {
         id: '2',
@@ -223,7 +227,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 600,
         taxRate: 0.1,
         category: 'service',
-        date: '2024-01-18'
+        date: `${currentYear}-01-18`
       },
       {
         id: '3',
@@ -233,7 +237,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 1600,
         taxRate: 0.1,
         category: 'transport',
-        date: '2024-01-18'
+        date: `${currentYear}-01-18`
       },
       {
         id: '4',
@@ -243,7 +247,7 @@ const DEMO_INVOICES: Invoice[] = [
         totalPrice: 900,
         taxRate: 0.1,
         category: 'dining',
-        date: '2024-01-19'
+        date: `${currentYear}-01-19`
       }
     ],
     subtotal: 5300,
@@ -253,11 +257,102 @@ const DEMO_INVOICES: Invoice[] = [
     currency: 'USD',
     status: 'paid',
     paymentMethod: 'bank-transfer',
-    paymentDate: '2024-01-22',
+    paymentDate: `${currentYear}-01-22`,
     paymentReference: 'WIRE-001',
     createdBy: '1',
     remindersSent: 0,
     notes: 'Diamond VIP guest - premium services',
+    terms: 'Payment due upon checkout'
+  },
+  // Additional recent invoices for better data
+  {
+    id: '5',
+    invoiceNumber: `INV-${currentYear}-005`,
+    guestId: '5',
+    clientName: 'Isabella Chen',
+    clientEmail: 'isabella.chen@techventures.com',
+    clientAddress: '88 Marina Bay, Singapore 018956',
+    issueDate: `${currentYear}-01-12`,
+    dueDate: `${currentYear}-02-12`,
+    items: [
+      {
+        id: '1',
+        description: 'Deluxe Room 302 - 3 nights (Jan 12-15)',
+        quantity: 3,
+        unitPrice: 320,
+        totalPrice: 960,
+        taxRate: 0.1,
+        category: 'accommodation',
+        date: `${currentYear}-01-12`
+      },
+      {
+        id: '2',
+        description: 'Business Center Services',
+        quantity: 1,
+        unitPrice: 150,
+        totalPrice: 150,
+        taxRate: 0.1,
+        category: 'service',
+        date: `${currentYear}-01-13`
+      }
+    ],
+    subtotal: 1110,
+    taxAmount: 111,
+    discountAmount: 0,
+    totalAmount: 1221,
+    currency: 'USD',
+    status: 'paid',
+    paymentMethod: 'card',
+    paymentDate: `${currentYear}-01-15`,
+    paymentReference: 'CARD-005',
+    createdBy: '1',
+    remindersSent: 0,
+    notes: 'Gold VIP guest - business traveler',
+    terms: 'Payment due upon checkout'
+  },
+  {
+    id: '6',
+    invoiceNumber: `INV-${currentYear}-006`,
+    guestId: '6',
+    clientName: 'Carlos Rodriguez',
+    clientEmail: 'carlos@email.com',
+    clientAddress: '789 Pine Street, Los Angeles, CA 90210, USA',
+    issueDate: `${currentYear}-01-10`,
+    dueDate: `${currentYear}-02-10`,
+    items: [
+      {
+        id: '1',
+        description: 'Standard Room 201 - 2 nights (Jan 10-12)',
+        quantity: 2,
+        unitPrice: 200,
+        totalPrice: 400,
+        taxRate: 0.1,
+        category: 'accommodation',
+        date: `${currentYear}-01-10`
+      },
+      {
+        id: '2',
+        description: 'Restaurant Dinner',
+        quantity: 1,
+        unitPrice: 95,
+        totalPrice: 95,
+        taxRate: 0.1,
+        category: 'restaurant',
+        date: `${currentYear}-01-11`
+      }
+    ],
+    subtotal: 495,
+    taxAmount: 49.5,
+    discountAmount: 0,
+    totalAmount: 544.5,
+    currency: 'USD',
+    status: 'paid',
+    paymentMethod: 'cash',
+    paymentDate: `${currentYear}-01-12`,
+    paymentReference: 'CASH-002',
+    createdBy: '1',
+    remindersSent: 0,
+    notes: 'Regular guest - cash payment',
     terms: 'Payment due upon checkout'
   }
 ];
@@ -274,7 +369,7 @@ const DEMO_PAYMENTS: Payment[] = [
     transactionId: 'txn_123456789',
     reference: 'CARD-001',
     processedBy: '1',
-    processedAt: '2024-01-25T11:30:00Z',
+    processedAt: `${currentYear}-01-25T11:30:00Z`,
     notes: 'Guest checkout payment'
   },
   {
@@ -288,7 +383,7 @@ const DEMO_PAYMENTS: Payment[] = [
     transactionId: 'txn_987654321',
     reference: 'CARD-002',
     processedBy: '1',
-    processedAt: '2024-01-22T14:15:00Z',
+    processedAt: `${currentYear}-01-22T14:15:00Z`,
     notes: 'VIP guest checkout payment'
   },
   {
@@ -301,7 +396,7 @@ const DEMO_PAYMENTS: Payment[] = [
     transactionId: 'wire_555666777',
     reference: 'WIRE-001',
     processedBy: '1',
-    processedAt: '2024-01-22T16:45:00Z',
+    processedAt: `${currentYear}-01-22T16:45:00Z`,
     notes: 'Diamond VIP guest - wire transfer payment'
   },
   {
@@ -312,7 +407,7 @@ const DEMO_PAYMENTS: Payment[] = [
     status: 'completed',
     reference: 'CASH-001',
     processedBy: '2',
-    processedAt: '2024-01-23T09:20:00Z',
+    processedAt: `${currentYear}-01-23T09:20:00Z`,
     notes: 'Restaurant payment - cash'
   },
   {
@@ -324,8 +419,33 @@ const DEMO_PAYMENTS: Payment[] = [
     transactionId: 'txn_111222333',
     reference: 'CARD-003',
     processedBy: '3',
-    processedAt: '2024-01-24T18:30:00Z',
+    processedAt: `${currentYear}-01-24T18:30:00Z`,
     notes: 'Room service payment'
+  },
+  {
+    id: '6',
+    invoiceId: '5',
+    amount: 1221,
+    currency: 'USD',
+    method: 'card',
+    status: 'completed',
+    transactionId: 'txn_444555666',
+    reference: 'CARD-005',
+    processedBy: '1',
+    processedAt: `${currentYear}-01-15T10:30:00Z`,
+    notes: 'Gold VIP guest checkout payment'
+  },
+  {
+    id: '7',
+    invoiceId: '6',
+    amount: 544.5,
+    currency: 'USD',
+    method: 'cash',
+    status: 'completed',
+    reference: 'CASH-002',
+    processedBy: '2',
+    processedAt: `${currentYear}-01-12T15:45:00Z`,
+    notes: 'Regular guest - cash payment'
   }
 ];
 
