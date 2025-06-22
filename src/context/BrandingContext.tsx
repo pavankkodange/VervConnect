@@ -95,6 +95,10 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     if (savedBranding) {
       try {
         const parsed = JSON.parse(savedBranding);
+        // Fix any invalid timezone values that might be stored
+        if (parsed.timeZone === 'Asia/Mumbai') {
+          parsed.timeZone = 'Asia/Kolkata';
+        }
         setBranding({ ...DEFAULT_BRANDING, ...parsed });
       } catch (error) {
         console.error('Failed to parse saved branding:', error);
@@ -108,6 +112,11 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   }, [branding]);
 
   const updateBranding = (updates: Partial<HotelBranding>) => {
+    // Fix timezone if it's the invalid 'Asia/Mumbai'
+    if (updates.timeZone === 'Asia/Mumbai') {
+      updates.timeZone = 'Asia/Kolkata';
+    }
+    
     const updatedBranding = {
       ...branding,
       ...updates,
@@ -196,22 +205,44 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const importBranding = (data: string) => {
     try {
       const imported = JSON.parse(data);
+      // Fix timezone if it's the invalid 'Asia/Mumbai'
+      if (imported.timeZone === 'Asia/Mumbai') {
+        imported.timeZone = 'Asia/Kolkata';
+      }
       updateBranding(imported);
     } catch (error) {
       throw new Error('Invalid branding data format');
     }
   };
 
+  // Helper function to validate and fix timezone
+  const getValidTimeZone = (timeZone: string): string => {
+    if (timeZone === 'Asia/Mumbai') {
+      return 'Asia/Kolkata';
+    }
+    
+    // Test if the timezone is valid
+    try {
+      new Date().toLocaleString('en-US', { timeZone });
+      return timeZone;
+    } catch (error) {
+      console.warn(`Invalid timezone ${timeZone}, falling back to America/New_York`);
+      return 'America/New_York';
+    }
+  };
+
   // Timezone-aware date/time formatting functions
   const convertToHotelTime = (utcDate: string | Date): Date => {
     const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate;
-    return new Date(date.toLocaleString("en-US", { timeZone: branding.timeZone }));
+    const validTimeZone = getValidTimeZone(branding.timeZone);
+    return new Date(date.toLocaleString("en-US", { timeZone: validTimeZone }));
   };
 
   const formatDateTime = (date: string | Date, options?: Intl.DateTimeFormatOptions): string => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const validTimeZone = getValidTimeZone(branding.timeZone);
     const defaultOptions: Intl.DateTimeFormatOptions = {
-      timeZone: branding.timeZone,
+      timeZone: validTimeZone,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -237,8 +268,9 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       timeToFormat = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
     }
     
+    const validTimeZone = getValidTimeZone(branding.timeZone);
     return timeToFormat.toLocaleTimeString('en-US', {
-      timeZone: branding.timeZone,
+      timeZone: validTimeZone,
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
@@ -247,8 +279,9 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 
   const formatDate = (date: string | Date): string => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const validTimeZone = getValidTimeZone(branding.timeZone);
     return dateObj.toLocaleDateString('en-US', {
-      timeZone: branding.timeZone,
+      timeZone: validTimeZone,
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -257,18 +290,21 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 
   const getCurrentDateTime = (): string => {
     const now = new Date();
-    return now.toLocaleString('sv-SE', { timeZone: branding.timeZone }).replace(' ', 'T');
+    const validTimeZone = getValidTimeZone(branding.timeZone);
+    return now.toLocaleString('sv-SE', { timeZone: validTimeZone }).replace(' ', 'T');
   };
 
   const getCurrentDate = (): string => {
     const now = new Date();
-    return now.toLocaleDateString('sv-SE', { timeZone: branding.timeZone });
+    const validTimeZone = getValidTimeZone(branding.timeZone);
+    return now.toLocaleDateString('sv-SE', { timeZone: validTimeZone });
   };
 
   const getCurrentTime = (): string => {
     const now = new Date();
+    const validTimeZone = getValidTimeZone(branding.timeZone);
     return now.toLocaleTimeString('en-US', {
-      timeZone: branding.timeZone,
+      timeZone: validTimeZone,
       hour12: false,
       hour: '2-digit',
       minute: '2-digit'
@@ -278,7 +314,8 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const getTimezoneOffset = (): string => {
     const now = new Date();
     const utc = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
-    const hotelTime = new Date(utc.toLocaleString("en-US", { timeZone: branding.timeZone }));
+    const validTimeZone = getValidTimeZone(branding.timeZone);
+    const hotelTime = new Date(utc.toLocaleString("en-US", { timeZone: validTimeZone }));
     const offset = (hotelTime.getTime() - utc.getTime()) / (1000 * 60 * 60);
     const sign = offset >= 0 ? '+' : '-';
     const hours = Math.floor(Math.abs(offset));
