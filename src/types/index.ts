@@ -123,6 +123,7 @@ export interface Room {
   vipServices?: string[]; // Included VIP services
 }
 
+// Enhanced Guest interface with ID document support
 export interface Guest {
   id: string;
   name: string;
@@ -154,7 +155,7 @@ export interface Guest {
     bedType?: string;
   };
   identificationDetails?: {
-    type: 'passport' | 'drivers_license' | 'national_id';
+    type: 'passport' | 'drivers_license' | 'national_id' | 'visa';
     number: string;
     issuingCountry?: string;
     expiryDate?: string;
@@ -165,6 +166,22 @@ export interface Guest {
     phone: string;
     email?: string;
   };
+  // Enhanced ID Document Management
+  idDocuments?: Array<{
+    id: string;
+    type: 'passport' | 'drivers_license' | 'national_id' | 'visa' | 'other';
+    documentName: string;
+    fileUrl: string;
+    fileType: 'image' | 'pdf';
+    fileName: string;
+    uploadedAt: string;
+    uploadedBy: string;
+    verified?: boolean;
+    verifiedBy?: string;
+    verifiedAt?: string;
+    expiryDate?: string;
+    notes?: string;
+  }>;
   // VIP Guest Features
   vipTier?: 'gold' | 'platinum' | 'diamond'; // VIP membership tiers
   vipSince?: string; // Date when VIP status was granted

@@ -31,10 +31,9 @@ import {
   Music,
   Clock,
   Calendar,
-  X,
-  Image as ImageIcon,
-  Move,
-  RotateCcw
+  FileImage,
+  FileText,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export function AdminModule() {
@@ -142,7 +141,7 @@ export function AdminModule() {
     }
   };
 
-  // Image upload handler
+  // Document upload handler for room and banquet hall photos
   const handleImageUpload = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -155,41 +154,41 @@ export function AdminModule() {
     });
   };
 
-  // Image URL validator
-  const isValidImageUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) !== null;
-    } catch {
-      return false;
-    }
+  // Image type validator
+  const isValidImageFile = (file: File): boolean => {
+    const validTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'
+    ];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    return validTypes.includes(file.type) && file.size <= maxSize;
   };
 
-  // Image Gallery Component
+  // Image Gallery Component for rooms and banquet halls
   const ImageGallery = ({ 
     images, 
     onAdd, 
     onRemove, 
-    onReorder, 
-    title = "Images",
-    maxImages = 10 
+    title = "Photos",
+    maxImages = 5 
   }: {
     images: string[];
-    onAdd: (url: string) => void;
+    onAdd: (imageUrl: string) => void;
     onRemove: (index: number) => void;
-    onReorder: (fromIndex: number, toIndex: number) => void;
     title?: string;
     maxImages?: number;
   }) => {
-    const [newImageUrl, setNewImageUrl] = useState('');
     const [uploadingImage, setUploadingImage] = useState(false);
-    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
     const handleImageFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {
         if (images.length >= maxImages) {
           alert(`Maximum ${maxImages} images allowed`);
+          return;
+        }
+        
+        if (!isValidImageFile(file)) {
+          alert('Please upload a valid image (JPG, PNG, GIF, WebP) under 5MB');
           return;
         }
         
@@ -205,38 +204,6 @@ export function AdminModule() {
       }
     };
 
-    const handleAddImageUrl = () => {
-      if (images.length >= maxImages) {
-        alert(`Maximum ${maxImages} images allowed`);
-        return;
-      }
-      
-      if (newImageUrl && isValidImageUrl(newImageUrl)) {
-        onAdd(newImageUrl);
-        setNewImageUrl('');
-      } else {
-        alert('Please enter a valid image URL (jpg, png, gif, webp, svg)');
-      }
-    };
-
-    const handleDragStart = (e: React.DragEvent, index: number) => {
-      setDraggedIndex(index);
-      e.dataTransfer.effectAllowed = 'move';
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    };
-
-    const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-      e.preventDefault();
-      if (draggedIndex !== null && draggedIndex !== dropIndex) {
-        onReorder(draggedIndex, dropIndex);
-      }
-      setDraggedIndex(null);
-    };
-
     return (
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-4">{title}</label>
@@ -244,74 +211,44 @@ export function AdminModule() {
         {/* Current Images */}
         {images.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
-            {images.map((photo, index) => (
-              <div 
-                key={index} 
-                className="relative group cursor-move"
-                draggable
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, index)}
-              >
-                <div className="relative">
-                  <img
-                    src={photo}
-                    alt={`${title} ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-lg border border-gray-200 transition-transform group-hover:scale-105"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg';
-                    }}
-                  />
-                  
-                  {/* Image Controls */}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => onRemove(index)}
-                        className="bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
-                        title="Remove image"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <div className="bg-blue-500 text-white rounded-full p-2">
-                        <Move className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Primary Image Indicator */}
-                  {index === 0 && (
-                    <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
-                      Primary
-                    </div>
-                  )}
-                  
-                  {/* Image Number */}
-                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                    {index + 1}
-                  </div>
+            {images.map((image, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={image}
+                  alt={`Image ${index + 1}`}
+                  className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://via.placeholder.com/150?text=Image+Error';
+                  }}
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => onRemove(index)}
+                    className="opacity-0 group-hover:opacity-100 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all duration-200"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Add Image Options */}
+        {/* Add Image */}
         {images.length < maxImages && (
-          <div className="space-y-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
             <div className="text-center">
-              <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 mb-2">Add {title.toLowerCase()}</p>
-              <p className="text-xs text-gray-500">
-                {images.length}/{maxImages} images • First image will be the primary image
+              <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-2">Upload Images</p>
+              <p className="text-xs text-gray-500 mb-4">
+                {images.length}/{maxImages} images • Max 5MB • Supported: JPG, PNG, GIF, WebP
               </p>
             </div>
 
-            {/* File Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Upload Image File</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
               <input
                 type="file"
                 accept="image/*"
@@ -327,76 +264,32 @@ export function AdminModule() {
               )}
             </div>
 
-            {/* URL Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Or Add Image URL</label>
-              <div className="flex space-x-2">
-                <input
-                  type="url"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddImageUrl();
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddImageUrl}
-                  disabled={!newImageUrl}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Supported formats: JPG, PNG, GIF, WebP, SVG
-              </p>
-            </div>
-
-            {/* Sample Images */}
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Quick Add Sample Images</p>
-              <div className="grid grid-cols-2 gap-2">
-                {title.toLowerCase().includes('room') ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onAdd('https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg')}
-                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                    >
-                      Modern Room
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onAdd('https://images.pexels.com/photos/271618/pexels-photo-271618.jpeg')}
-                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                    >
-                      Luxury Suite
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onAdd('https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg')}
-                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                    >
-                      Grand Ballroom
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onAdd('https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg')}
-                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                    >
-                      Conference Hall
-                    </button>
-                  </>
-                )}
+            <div className="mt-4 text-xs text-gray-500">
+              <p>You can also use external image URLs from services like Pexels or Unsplash.</p>
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Add Image URL</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const input = (e.target as HTMLButtonElement).previousElementSibling as HTMLInputElement;
+                      if (input.value && input.validity.valid) {
+                        onAdd(input.value);
+                        input.value = '';
+                      } else {
+                        alert('Please enter a valid image URL');
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -524,14 +417,18 @@ export function AdminModule() {
       photos: editingRoom?.photos || []
     });
 
+    const handleAddPhoto = (photoUrl: string) => {
+      setFormData({ ...formData, photos: [...formData.photos, photoUrl] });
+    };
+
+    const handleRemovePhoto = (index: number) => {
+      const updatedPhotos = [...formData.photos];
+      updatedPhotos.splice(index, 1);
+      setFormData({ ...formData, photos: updatedPhotos });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      
-      if (formData.photos.length === 0) {
-        // Add default image if no photos provided
-        formData.photos = ['https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg'];
-      }
-      
       const roomData = {
         ...formData,
         status: 'clean' as const
@@ -547,47 +444,11 @@ export function AdminModule() {
       handleSave();
     };
 
-    const handleAddImage = (url: string) => {
-      setFormData(prev => ({
-        ...prev,
-        photos: [...prev.photos, url]
-      }));
-    };
-
-    const handleRemoveImage = (index: number) => {
-      setFormData(prev => ({
-        ...prev,
-        photos: prev.photos.filter((_, i) => i !== index)
-      }));
-    };
-
-    const handleReorderImages = (fromIndex: number, toIndex: number) => {
-      setFormData(prev => {
-        const newPhotos = [...prev.photos];
-        const [removed] = newPhotos.splice(fromIndex, 1);
-        newPhotos.splice(toIndex, 0, removed);
-        return { ...prev, photos: newPhotos };
-      });
-    };
-
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-5xl w-full m-4 max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold">{editingRoom ? 'Edit Room' : 'Add New Room'}</h3>
-            <button
-              onClick={() => {
-                setShowRoomForm(false);
-                setEditingRoom(null);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
+        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full m-4 max-h-[90vh] overflow-y-auto">
+          <h3 className="text-2xl font-bold mb-6">{editingRoom ? 'Edit Room' : 'Add New Room'}</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Room Number</label>
@@ -699,30 +560,31 @@ export function AdminModule() {
               </label>
             </div>
 
-            {/* Image Management */}
-            <ImageGallery
-              images={formData.photos}
-              onAdd={handleAddImage}
-              onRemove={handleRemoveImage}
-              onReorder={handleReorderImages}
-              title="Room Images"
-              maxImages={8}
-            />
+            {/* Room Photos */}
+            <div className="mt-6">
+              <ImageGallery
+                images={formData.photos}
+                onAdd={handleAddPhoto}
+                onRemove={handleRemovePhoto}
+                title="Room Photos"
+                maxImages={10}
+              />
+            </div>
             
-            <div className="flex space-x-4 pt-6 border-t border-gray-200">
+            <div className="flex space-x-4 pt-4">
               <button
                 type="button"
                 onClick={() => {
                   setShowRoomForm(false);
                   setEditingRoom(null);
                 }}
-                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
               >
                 {editingRoom ? 'Update' : 'Create'} Room
               </button>
@@ -742,13 +604,18 @@ export function AdminModule() {
       photos: editingBanquet?.photos || []
     });
 
+    const handleAddPhoto = (photoUrl: string) => {
+      setFormData({ ...formData, photos: [...formData.photos, photoUrl] });
+    };
+
+    const handleRemovePhoto = (index: number) => {
+      const updatedPhotos = [...formData.photos];
+      updatedPhotos.splice(index, 1);
+      setFormData({ ...formData, photos: updatedPhotos });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      
-      if (formData.photos.length === 0) {
-        // Add default image if no photos provided
-        formData.photos = ['https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg'];
-      }
       
       if (editingBanquet) {
         updateBanquetHall(editingBanquet.id, formData);
@@ -760,46 +627,11 @@ export function AdminModule() {
       handleSave();
     };
 
-    const handleAddImage = (url: string) => {
-      setFormData(prev => ({
-        ...prev,
-        photos: [...prev.photos, url]
-      }));
-    };
-
-    const handleRemoveImage = (index: number) => {
-      setFormData(prev => ({
-        ...prev,
-        photos: prev.photos.filter((_, i) => i !== index)
-      }));
-    };
-
-    const handleReorderImages = (fromIndex: number, toIndex: number) => {
-      setFormData(prev => {
-        const newPhotos = [...prev.photos];
-        const [removed] = newPhotos.splice(fromIndex, 1);
-        newPhotos.splice(toIndex, 0, removed);
-        return { ...prev, photos: newPhotos };
-      });
-    };
-
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-4xl w-full m-4 max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold">{editingBanquet ? 'Edit Banquet Hall' : 'Add New Banquet Hall'}</h3>
-            <button
-              onClick={() => {
-                setShowBanquetForm(false);
-                setEditingBanquet(null);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full m-4 max-h-[90vh] overflow-y-auto">
+          <h3 className="text-2xl font-bold mb-6">{editingBanquet ? 'Edit Banquet Hall' : 'Add New Banquet Hall'}</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Hall Name</label>
               <input
@@ -810,167 +642,47 @@ export function AdminModule() {
                 required
               />
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
-                <input
-                  type="number"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 50 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  min="1"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rate per Hour</label>
-                <input
-                  type="number"
-                  value={formData.rate}
-                  onChange={(e) => setFormData({ ...formData, rate: parseFloat(e.target.value) || 200 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Image Management */}
-            <ImageGallery
-              images={formData.photos}
-              onAdd={handleAddImage}
-              onRemove={handleRemoveImage}
-              onReorder={handleReorderImages}
-              title="Banquet Hall Images"
-              maxImages={10}
-            />
-            
-            <div className="flex space-x-4 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowBanquetForm(false);
-                  setEditingBanquet(null);
-                }}
-                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-              >
-                {editingBanquet ? 'Update' : 'Create'} Hall
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
-  const TableForm = () => {
-    const [formData, setFormData] = useState({
-      number: editingTable?.number || '',
-      seats: editingTable?.seats || 2,
-      position: editingTable?.position || { x: 100, y: 100 }
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      const tableData = {
-        ...formData,
-        status: 'available' as const
-      };
-      
-      if (editingTable) {
-        updateRestaurantTable(editingTable.id, tableData);
-      } else {
-        addRestaurantTable(tableData);
-      }
-      setShowTableForm(false);
-      setEditingTable(null);
-      handleSave();
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full m-4">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold">{editingTable ? 'Edit Table' : 'Add New Table'}</h3>
-            <button
-              onClick={() => {
-                setShowTableForm(false);
-                setEditingTable(null);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Table Number</label>
-              <input
-                type="text"
-                value={formData.number}
-                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Number of Seats</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
               <input
                 type="number"
-                value={formData.seats}
-                onChange={(e) => setFormData({ ...formData, seats: parseInt(e.target.value) || 2 })}
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 50 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                 min="1"
-                max="12"
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Position X</label>
-                <input
-                  type="number"
-                  value={formData.position.x}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    position: { ...formData.position, x: parseInt(e.target.value) || 100 }
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  min="0"
-                  max="400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Position Y</label>
-                <input
-                  type="number"
-                  value={formData.position.y}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    position: { ...formData.position, y: parseInt(e.target.value) || 100 }
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  min="0"
-                  max="300"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Rate per Hour</label>
+              <input
+                type="number"
+                value={formData.rate}
+                onChange={(e) => setFormData({ ...formData, rate: parseFloat(e.target.value) || 200 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+
+            {/* Banquet Hall Photos */}
+            <div className="mt-6">
+              <ImageGallery
+                images={formData.photos}
+                onAdd={handleAddPhoto}
+                onRemove={handleRemovePhoto}
+                title="Banquet Hall Photos"
+                maxImages={10}
+              />
             </div>
             
             <div className="flex space-x-4 pt-4">
               <button
                 type="button"
                 onClick={() => {
-                  setShowTableForm(false);
-                  setEditingTable(null);
+                  setShowBanquetForm(false);
+                  setEditingBanquet(null);
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
@@ -980,7 +692,7 @@ export function AdminModule() {
                 type="submit"
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
               >
-                {editingTable ? 'Update' : 'Create'} Table
+                {editingBanquet ? 'Update' : 'Create'} Hall
               </button>
             </div>
           </form>
@@ -1251,7 +963,7 @@ export function AdminModule() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photos</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -1291,8 +1003,24 @@ export function AdminModule() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1">
-                        <Camera className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">{room.photos.length}</span>
+                        {room.photos && room.photos.length > 0 ? (
+                          <>
+                            <div className="w-8 h-8 rounded-md overflow-hidden">
+                              <img 
+                                src={room.photos[0]}
+                                alt={`Room ${room.number}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-500">{room.photos.length} photos</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-500">No photos</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1351,7 +1079,7 @@ export function AdminModule() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amenities</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photos</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -1388,8 +1116,24 @@ export function AdminModule() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1">
-                        <Camera className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">{hall.photos.length}</span>
+                        {hall.photos && hall.photos.length > 0 ? (
+                          <>
+                            <div className="w-8 h-8 rounded-md overflow-hidden">
+                              <img 
+                                src={hall.photos[0]}
+                                alt={hall.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-500">{hall.photos.length} photos</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-500">No photos</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1638,7 +1382,6 @@ export function AdminModule() {
       {showUserForm && <UserForm />}
       {showRoomForm && <RoomForm />}
       {showBanquetForm && <BanquetForm />}
-      {showTableForm && <TableForm />}
     </div>
   );
 }

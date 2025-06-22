@@ -236,7 +236,23 @@ const DEMO_GUESTS: Guest[] = [
       email: 'jane.doe@email.com'
     },
     specialRequests: ['Late checkout', 'Extra pillows'],
-    dietaryRestrictions: ['Vegetarian']
+    dietaryRestrictions: ['Vegetarian'],
+    idDocuments: [
+      {
+        id: '1',
+        type: 'passport',
+        documentName: 'Passport',
+        fileUrl: 'https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg',
+        fileType: 'image',
+        fileName: 'passport.jpg',
+        uploadedAt: '2024-01-15T10:30:00Z',
+        uploadedBy: 'system',
+        verified: true,
+        verifiedBy: 'admin',
+        verifiedAt: '2024-01-15T11:00:00Z',
+        expiryDate: '2028-06-15'
+      }
+    ]
   },
   { 
     id: '2', 
@@ -285,7 +301,37 @@ const DEMO_GUESTS: Guest[] = [
       specialServices: ['Airport Transfer', 'Personal Shopping', 'Restaurant Reservations'],
       dietaryRequirements: ['Gluten-free', 'Organic Options'],
       communicationPreference: 'email'
-    }
+    },
+    idDocuments: [
+      {
+        id: '2',
+        type: 'passport',
+        documentName: 'Passport',
+        fileUrl: 'https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg',
+        fileType: 'image',
+        fileName: 'uk_passport.jpg',
+        uploadedAt: '2024-01-20T09:15:00Z',
+        uploadedBy: 'system',
+        verified: true,
+        verifiedBy: 'admin',
+        verifiedAt: '2024-01-20T10:00:00Z',
+        expiryDate: '2026-03-22'
+      },
+      {
+        id: '3',
+        type: 'visa',
+        documentName: 'Visa Document',
+        fileUrl: 'https://example.com/visa.pdf',
+        fileType: 'pdf',
+        fileName: 'visa_document.pdf',
+        uploadedAt: '2024-01-20T09:20:00Z',
+        uploadedBy: 'system',
+        verified: true,
+        verifiedBy: 'admin',
+        verifiedAt: '2024-01-20T10:05:00Z',
+        expiryDate: '2025-12-31'
+      }
+    ]
   },
   {
     id: '3',
@@ -372,7 +418,36 @@ const DEMO_GUESTS: Guest[] = [
       specialServices: ['Helicopter Transfer', 'Private Chef', 'Yacht Charter', 'Personal Security'],
       dietaryRequirements: ['Keto-friendly', 'Organic', 'Premium Ingredients'],
       communicationPreference: 'phone'
-    }
+    },
+    idDocuments: [
+      {
+        id: '4',
+        type: 'passport',
+        documentName: 'Passport',
+        fileUrl: 'https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg',
+        fileType: 'image',
+        fileName: 'vip_passport.jpg',
+        uploadedAt: '2024-01-05T14:30:00Z',
+        uploadedBy: 'concierge-vip-001',
+        verified: true,
+        verifiedBy: 'admin',
+        verifiedAt: '2024-01-05T15:00:00Z',
+        expiryDate: '2029-09-12'
+      },
+      {
+        id: '5',
+        type: 'other',
+        documentName: 'Private Jet License',
+        fileUrl: 'https://example.com/jet_license.pdf',
+        fileType: 'pdf',
+        fileName: 'private_jet_license.pdf',
+        uploadedAt: '2024-01-05T14:35:00Z',
+        uploadedBy: 'concierge-vip-001',
+        verified: true,
+        verifiedBy: 'admin',
+        verifiedAt: '2024-01-05T15:05:00Z'
+      }
+    ]
   },
   {
     id: '5',
@@ -421,7 +496,23 @@ const DEMO_GUESTS: Guest[] = [
       specialServices: ['Business Support', 'Tech Setup', 'Meeting Room Access'],
       dietaryRequirements: ['Pescatarian', 'Asian Cuisine Options'],
       communicationPreference: 'email'
-    }
+    },
+    idDocuments: [
+      {
+        id: '6',
+        type: 'passport',
+        documentName: 'Passport',
+        fileUrl: 'https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg',
+        fileType: 'image',
+        fileName: 'singapore_passport.jpg',
+        uploadedAt: '2024-01-12T11:45:00Z',
+        uploadedBy: 'concierge-002',
+        verified: true,
+        verifiedBy: 'admin',
+        verifiedAt: '2024-01-12T12:15:00Z',
+        expiryDate: '2028-04-25'
+      }
+    ]
   }
 ];
 
