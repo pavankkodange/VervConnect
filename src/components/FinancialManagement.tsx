@@ -353,6 +353,151 @@ export function FinancialManagement() {
     );
   };
 
+  const PaymentForm = () => {
+    const [formData, setFormData] = useState({
+      invoiceId: '',
+      amount: '',
+      method: 'card' as 'cash' | 'card' | 'bank-transfer' | 'check' | 'online',
+      reference: '',
+      notes: ''
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      processPayment({
+        invoiceId: formData.invoiceId,
+        amount: parseFloat(formData.amount),
+        currency: hotelSettings.baseCurrency,
+        method: formData.method,
+        status: 'completed',
+        reference: formData.reference,
+        processedBy: user!.id,
+        notes: formData.notes
+      });
+
+      if (formData.invoiceId) {
+        markInvoiceAsPaid(formData.invoiceId, {
+          amount: parseFloat(formData.amount),
+          currency: hotelSettings.baseCurrency,
+          method: formData.method,
+          status: 'completed',
+          reference: formData.reference,
+          processedBy: user!.id
+        });
+      }
+
+      setShowPaymentForm(false);
+      setFormData({
+        invoiceId: '',
+        amount: '',
+        method: 'card',
+        reference: '',
+        notes: ''
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl max-w-md w-full m-4">
+          <div className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Record Payment</h3>
+              <button
+                onClick={() => setShowPaymentForm(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Invoice (Optional)</label>
+                <select
+                  value={formData.invoiceId}
+                  onChange={(e) => setFormData({ ...formData, invoiceId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Select invoice (optional)</option>
+                  {outstandingInvoices.map((invoice) => (
+                    <option key={invoice.id} value={invoice.id}>
+                      {invoice.invoiceNumber} - {formatCurrency(invoice.totalAmount)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                <select
+                  value={formData.method}
+                  onChange={(e) => setFormData({ ...formData, method: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="card">Credit Card</option>
+                  <option value="bank-transfer">Bank Transfer</option>
+                  <option value="check">Check</option>
+                  <option value="online">Online Payment</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reference</label>
+                <input
+                  type="text"
+                  value={formData.reference}
+                  onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Transaction ID, Check number, etc."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentForm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Record Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -394,7 +539,6 @@ export function FinancialManagement() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                
                     activeTab === tab.id
                       ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -826,6 +970,7 @@ export function FinancialManagement() {
 
       {/* Modals */}
       {showInvoiceForm && <InvoiceForm />}
+      {showPaymentForm && <PaymentForm />}
     </div>
   );
 }
