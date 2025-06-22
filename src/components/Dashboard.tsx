@@ -397,53 +397,58 @@ export function Dashboard({ onModuleChange }: DashboardProps) {
           
           {/* Room Status Breakdown */}
           {roomBreakdown && (
-            <div className="mt-3 grid grid-cols-5 gap-1">
-              <div className="text-center">
-                <div className="w-full h-2 bg-green-200 rounded-full mb-1">
-                  <div 
-                    className="h-full bg-green-500 rounded-full" 
-                    style={{ width: `${(roomBreakdown.available / roomBreakdown.total) * 100}%` }}
-                  ></div>
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-5 gap-1">
+                <div className="text-center">
+                  <div className="w-full h-2 bg-green-200 rounded-full mb-1">
+                    <div 
+                      className="h-full bg-green-500 rounded-full" 
+                      style={{ width: `${(roomBreakdown.available / roomBreakdown.total) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-green-600 font-medium">{roomBreakdown.available}</span>
                 </div>
-                <span className="text-xs text-green-600 font-medium">{roomBreakdown.available}</span>
-                <p className="text-xs text-gray-500">Available</p>
+                <div className="text-center">
+                  <div className="w-full h-2 bg-blue-200 rounded-full mb-1">
+                    <div 
+                      className="h-full bg-blue-500 rounded-full" 
+                      style={{ width: `${(roomBreakdown.occupied / roomBreakdown.total) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-blue-600 font-medium">{roomBreakdown.occupied}</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-full h-2 bg-orange-200 rounded-full mb-1">
+                    <div 
+                      className="h-full bg-orange-500 rounded-full" 
+                      style={{ width: `${(roomBreakdown.dirty / roomBreakdown.total) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-orange-600 font-medium">{roomBreakdown.dirty}</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-full h-2 bg-red-200 rounded-full mb-1">
+                    <div 
+                      className="h-full bg-red-500 rounded-full" 
+                      style={{ width: `${(roomBreakdown.maintenance / roomBreakdown.total) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-red-600 font-medium">{roomBreakdown.maintenance}</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-full h-2 bg-gray-200 rounded-full mb-1">
+                    <div className="h-full bg-gray-500 rounded-full" style={{ width: '100%' }}></div>
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium">{roomBreakdown.total}</span>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="w-full h-2 bg-blue-200 rounded-full mb-1">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full" 
-                    style={{ width: `${(roomBreakdown.occupied / roomBreakdown.total) * 100}%` }}
-                  ></div>
-                </div>
-                <span className="text-xs text-blue-600 font-medium">{roomBreakdown.occupied}</span>
-                <p className="text-xs text-gray-500">Occupied</p>
-              </div>
-              <div className="text-center">
-                <div className="w-full h-2 bg-orange-200 rounded-full mb-1">
-                  <div 
-                    className="h-full bg-orange-500 rounded-full" 
-                    style={{ width: `${(roomBreakdown.dirty / roomBreakdown.total) * 100}%` }}
-                  ></div>
-                </div>
-                <span className="text-xs text-orange-600 font-medium">{roomBreakdown.dirty}</span>
-                <p className="text-xs text-gray-500">Dirty</p>
-              </div>
-              <div className="text-center">
-                <div className="w-full h-2 bg-red-200 rounded-full mb-1">
-                  <div 
-                    className="h-full bg-red-500 rounded-full" 
-                    style={{ width: `${(roomBreakdown.maintenance / roomBreakdown.total) * 100}%` }}
-                  ></div>
-                </div>
-                <span className="text-xs text-red-600 font-medium">{roomBreakdown.maintenance}</span>
-                <p className="text-xs text-gray-500">Maintenance</p>
-              </div>
-              <div className="text-center">
-                <div className="w-full h-2 bg-gray-200 rounded-full mb-1">
-                  <div className="h-full bg-gray-500 rounded-full" style={{ width: '100%' }}></div>
-                </div>
-                <span className="text-xs text-gray-600 font-medium">{roomBreakdown.total}</span>
-                <p className="text-xs text-gray-500">Total</p>
+              
+              <div className="grid grid-cols-5 gap-1 text-center">
+                <div className="text-xs text-gray-500">Available</div>
+                <div className="text-xs text-gray-500">Occupied</div>
+                <div className="text-xs text-gray-500">Dirty</div>
+                <div className="text-xs text-gray-500">Maintenance</div>
+                <div className="text-xs text-gray-500">Total</div>
               </div>
             </div>
           )}
@@ -564,9 +569,9 @@ export function Dashboard({ onModuleChange }: DashboardProps) {
         </div>
       )}
 
-      {/* Role-specific Primary Stats - Consolidated */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
-        {roleContent.primaryStats.map((stat, index) => (
+      {/* Role-specific Primary Stats - Arranged in 2x2 grid for desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
+        {roleContent.primaryStats.slice(0, 4).map((stat, index) => (
           <ClickableCard
             key={index}
             title={stat.title}
