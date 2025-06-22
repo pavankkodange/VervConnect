@@ -30,7 +30,11 @@ import {
   Utensils,
   Music,
   Clock,
-  Calendar
+  Calendar,
+  X,
+  Image as ImageIcon,
+  Move,
+  RotateCcw
 } from 'lucide-react';
 
 export function AdminModule() {
@@ -136,6 +140,269 @@ export function AdminModule() {
       };
       reader.readAsText(file);
     }
+  };
+
+  // Image upload handler
+  const handleImageUpload = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        resolve(dataUrl);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Image URL validator
+  const isValidImageUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) !== null;
+    } catch {
+      return false;
+    }
+  };
+
+  // Image Gallery Component
+  const ImageGallery = ({ 
+    images, 
+    onAdd, 
+    onRemove, 
+    onReorder, 
+    title = "Images",
+    maxImages = 10 
+  }: {
+    images: string[];
+    onAdd: (url: string) => void;
+    onRemove: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
+    title?: string;
+    maxImages?: number;
+  }) => {
+    const [newImageUrl, setNewImageUrl] = useState('');
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+    const handleImageFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        if (images.length >= maxImages) {
+          alert(`Maximum ${maxImages} images allowed`);
+          return;
+        }
+        
+        setUploadingImage(true);
+        try {
+          const imageUrl = await handleImageUpload(file);
+          onAdd(imageUrl);
+        } catch (error) {
+          alert('Failed to upload image');
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+    };
+
+    const handleAddImageUrl = () => {
+      if (images.length >= maxImages) {
+        alert(`Maximum ${maxImages} images allowed`);
+        return;
+      }
+      
+      if (newImageUrl && isValidImageUrl(newImageUrl)) {
+        onAdd(newImageUrl);
+        setNewImageUrl('');
+      } else {
+        alert('Please enter a valid image URL (jpg, png, gif, webp, svg)');
+      }
+    };
+
+    const handleDragStart = (e: React.DragEvent, index: number) => {
+      setDraggedIndex(index);
+      e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+      e.preventDefault();
+      if (draggedIndex !== null && draggedIndex !== dropIndex) {
+        onReorder(draggedIndex, dropIndex);
+      }
+      setDraggedIndex(null);
+    };
+
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-4">{title}</label>
+        
+        {/* Current Images */}
+        {images.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+            {images.map((photo, index) => (
+              <div 
+                key={index} 
+                className="relative group cursor-move"
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, index)}
+              >
+                <div className="relative">
+                  <img
+                    src={photo}
+                    alt={`${title} ${index + 1}`}
+                    className="w-full h-32 object-cover rounded-lg border border-gray-200 transition-transform group-hover:scale-105"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg';
+                    }}
+                  />
+                  
+                  {/* Image Controls */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => onRemove(index)}
+                        className="bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
+                        title="Remove image"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <div className="bg-blue-500 text-white rounded-full p-2">
+                        <Move className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Primary Image Indicator */}
+                  {index === 0 && (
+                    <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                      Primary
+                    </div>
+                  )}
+                  
+                  {/* Image Number */}
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                    {index + 1}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add Image Options */}
+        {images.length < maxImages && (
+          <div className="space-y-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+            <div className="text-center">
+              <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-2">Add {title.toLowerCase()}</p>
+              <p className="text-xs text-gray-500">
+                {images.length}/{maxImages} images • First image will be the primary image
+              </p>
+            </div>
+
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Upload Image File</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageFileUpload}
+                disabled={uploadingImage}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              />
+              {uploadingImage && (
+                <p className="text-sm text-blue-600 mt-1 flex items-center">
+                  <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                  Uploading image...
+                </p>
+              )}
+            </div>
+
+            {/* URL Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Or Add Image URL</label>
+              <div className="flex space-x-2">
+                <input
+                  type="url"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddImageUrl();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  disabled={!newImageUrl}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Supported formats: JPG, PNG, GIF, WebP, SVG
+              </p>
+            </div>
+
+            {/* Sample Images */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Quick Add Sample Images</p>
+              <div className="grid grid-cols-2 gap-2">
+                {title.toLowerCase().includes('room') ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onAdd('https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg')}
+                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      Modern Room
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAdd('https://images.pexels.com/photos/271618/pexels-photo-271618.jpeg')}
+                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      Luxury Suite
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onAdd('https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg')}
+                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      Grand Ballroom
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAdd('https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg')}
+                      className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      Conference Hall
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const UserForm = () => {
@@ -254,11 +521,17 @@ export function AdminModule() {
       view: editingRoom?.view || 'City',
       smokingAllowed: editingRoom?.smokingAllowed || false,
       amenities: editingRoom?.amenities || ['WiFi', 'AC', 'TV'],
-      photos: editingRoom?.photos || ['https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg']
+      photos: editingRoom?.photos || []
     });
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
+      
+      if (formData.photos.length === 0) {
+        // Add default image if no photos provided
+        formData.photos = ['https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg'];
+      }
+      
       const roomData = {
         ...formData,
         status: 'clean' as const
@@ -274,11 +547,47 @@ export function AdminModule() {
       handleSave();
     };
 
+    const handleAddImage = (url: string) => {
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, url]
+      }));
+    };
+
+    const handleRemoveImage = (index: number) => {
+      setFormData(prev => ({
+        ...prev,
+        photos: prev.photos.filter((_, i) => i !== index)
+      }));
+    };
+
+    const handleReorderImages = (fromIndex: number, toIndex: number) => {
+      setFormData(prev => {
+        const newPhotos = [...prev.photos];
+        const [removed] = newPhotos.splice(fromIndex, 1);
+        newPhotos.splice(toIndex, 0, removed);
+        return { ...prev, photos: newPhotos };
+      });
+    };
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full m-4 max-h-[90vh] overflow-y-auto">
-          <h3 className="text-2xl font-bold mb-6">{editingRoom ? 'Edit Room' : 'Add New Room'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-white rounded-2xl p-8 max-w-5xl w-full m-4 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold">{editingRoom ? 'Edit Room' : 'Add New Room'}</h3>
+            <button
+              onClick={() => {
+                setShowRoomForm(false);
+                setEditingRoom(null);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Room Number</label>
@@ -389,21 +698,31 @@ export function AdminModule() {
                 <span className="text-sm font-medium text-gray-700">Smoking Allowed</span>
               </label>
             </div>
+
+            {/* Image Management */}
+            <ImageGallery
+              images={formData.photos}
+              onAdd={handleAddImage}
+              onRemove={handleRemoveImage}
+              onReorder={handleReorderImages}
+              title="Room Images"
+              maxImages={8}
+            />
             
-            <div className="flex space-x-4 pt-4">
+            <div className="flex space-x-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={() => {
                   setShowRoomForm(false);
                   setEditingRoom(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
               >
                 {editingRoom ? 'Update' : 'Create'} Room
               </button>
@@ -420,11 +739,16 @@ export function AdminModule() {
       capacity: editingBanquet?.capacity || 50,
       rate: editingBanquet?.rate || 200,
       amenities: editingBanquet?.amenities || ['Audio System', 'Lighting', 'Catering'],
-      photos: editingBanquet?.photos || ['https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg']
+      photos: editingBanquet?.photos || []
     });
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
+      
+      if (formData.photos.length === 0) {
+        // Add default image if no photos provided
+        formData.photos = ['https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg'];
+      }
       
       if (editingBanquet) {
         updateBanquetHall(editingBanquet.id, formData);
@@ -436,11 +760,46 @@ export function AdminModule() {
       handleSave();
     };
 
+    const handleAddImage = (url: string) => {
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, url]
+      }));
+    };
+
+    const handleRemoveImage = (index: number) => {
+      setFormData(prev => ({
+        ...prev,
+        photos: prev.photos.filter((_, i) => i !== index)
+      }));
+    };
+
+    const handleReorderImages = (fromIndex: number, toIndex: number) => {
+      setFormData(prev => {
+        const newPhotos = [...prev.photos];
+        const [removed] = newPhotos.splice(fromIndex, 1);
+        newPhotos.splice(toIndex, 0, removed);
+        return { ...prev, photos: newPhotos };
+      });
+    };
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full m-4">
-          <h3 className="text-2xl font-bold mb-6">{editingBanquet ? 'Edit Banquet Hall' : 'Add New Banquet Hall'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-white rounded-2xl p-8 max-w-4xl w-full m-4 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold">{editingBanquet ? 'Edit Banquet Hall' : 'Add New Banquet Hall'}</h3>
+            <button
+              onClick={() => {
+                setShowBanquetForm(false);
+                setEditingBanquet(null);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Hall Name</label>
               <input
@@ -451,44 +810,57 @@ export function AdminModule() {
                 required
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
-              <input
-                type="number"
-                value={formData.capacity}
-                onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 50 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                min="1"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rate per Hour</label>
-              <input
-                type="number"
-                value={formData.rate}
-                onChange={(e) => setFormData({ ...formData, rate: parseFloat(e.target.value) || 200 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                min="0"
-                step="0.01"
-                required
-              />
-            </div>
             
-            <div className="flex space-x-4 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
+                <input
+                  type="number"
+                  value={formData.capacity}
+                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 50 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  min="1"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rate per Hour</label>
+                <input
+                  type="number"
+                  value={formData.rate}
+                  onChange={(e) => setFormData({ ...formData, rate: parseFloat(e.target.value) || 200 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Image Management */}
+            <ImageGallery
+              images={formData.photos}
+              onAdd={handleAddImage}
+              onRemove={handleRemoveImage}
+              onReorder={handleReorderImages}
+              title="Banquet Hall Images"
+              maxImages={10}
+            />
+            
+            <div className="flex space-x-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={() => {
                   setShowBanquetForm(false);
                   setEditingBanquet(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
               >
                 {editingBanquet ? 'Update' : 'Create'} Hall
               </button>
@@ -503,11 +875,7 @@ export function AdminModule() {
     const [formData, setFormData] = useState({
       number: editingTable?.number || '',
       seats: editingTable?.seats || 2,
-      position: editingTable?.position || { x: 50, y: 50 },
-      section: editingTable?.section || '',
-      tableType: editingTable?.tableType || 'indoor',
-      smoking: editingTable?.smoking || false,
-      accessibility: editingTable?.accessibility || false
+      position: editingTable?.position || { x: 100, y: 100 }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -530,7 +898,19 @@ export function AdminModule() {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 max-w-md w-full m-4">
-          <h3 className="text-2xl font-bold mb-6">{editingTable ? 'Edit Restaurant Table' : 'Add New Restaurant Table'}</h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold">{editingTable ? 'Edit Table' : 'Add New Table'}</h3>
+            <button
+              onClick={() => {
+                setShowTableForm(false);
+                setEditingTable(null);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Table Number</label>
@@ -562,7 +942,7 @@ export function AdminModule() {
                   value={formData.position.x}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    position: { ...formData.position, x: parseInt(e.target.value) || 50 }
+                    position: { ...formData.position, x: parseInt(e.target.value) || 100 }
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   min="0"
@@ -576,55 +956,13 @@ export function AdminModule() {
                   value={formData.position.y}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    position: { ...formData.position, y: parseInt(e.target.value) || 50 }
+                    position: { ...formData.position, y: parseInt(e.target.value) || 100 }
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   min="0"
-                  max="400"
+                  max="300"
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Section</label>
-              <input
-                type="text"
-                value={formData.section}
-                onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="e.g., Main Dining, Patio, VIP"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Table Type</label>
-              <select
-                value={formData.tableType}
-                onChange={(e) => setFormData({ ...formData, tableType: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="indoor">Indoor</option>
-                <option value="outdoor">Outdoor</option>
-                <option value="private">Private Dining</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.smoking}
-                  onChange={(e) => setFormData({ ...formData, smoking: e.target.checked })}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm font-medium text-gray-700">Smoking Allowed</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.accessibility}
-                  onChange={(e) => setFormData({ ...formData, accessibility: e.target.checked })}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm font-medium text-gray-700">Wheelchair Accessible</span>
-              </label>
             </div>
             
             <div className="flex space-x-4 pt-4">
@@ -913,6 +1251,7 @@ export function AdminModule() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -949,6 +1288,12 @@ export function AdminModule() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>{room.maxOccupancy} guests • {room.size}m² • {room.bedType}</div>
                       <div>{room.view} view • {room.smokingAllowed ? 'Smoking' : 'Non-smoking'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-1">
+                        <Camera className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">{room.photos.length}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
@@ -1006,6 +1351,7 @@ export function AdminModule() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amenities</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -1038,6 +1384,12 @@ export function AdminModule() {
                             +{hall.amenities.length - 3} more
                           </span>
                         )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-1">
+                        <Camera className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">{hall.photos.length}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
