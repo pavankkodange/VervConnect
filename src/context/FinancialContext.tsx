@@ -12,6 +12,7 @@ interface FinancialContextType {
   deleteInvoice: (invoiceId: string) => void;
   markInvoiceAsPaid: (invoiceId: string, paymentData: Omit<Payment, 'id' | 'processedAt'>) => void;
   sendInvoiceReminder: (invoiceId: string) => void;
+  generateInvoiceFromBooking: (bookingId: string, bookingData: any, guestData: any) => void;
   
   // Payment processing
   processPayment: (payment: Omit<Payment, 'id' | 'processedAt'>) => void;
@@ -37,7 +38,7 @@ interface FinancialContextType {
 
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
-// Demo data
+// Enhanced demo data with more realistic invoices
 const DEMO_INVOICES: Invoice[] = [
   {
     id: '1',
@@ -46,30 +47,218 @@ const DEMO_INVOICES: Invoice[] = [
     guestId: '1',
     clientName: 'John Doe',
     clientEmail: 'john@email.com',
+    clientAddress: '123 Main Street, New York, NY 10001, USA',
     issueDate: '2024-01-22',
     dueDate: '2024-02-22',
     items: [
       {
         id: '1',
-        description: 'Room 102 - 3 nights',
+        description: 'Room 102 - 3 nights (Jan 22-25)',
         quantity: 3,
         unitPrice: 150,
         totalPrice: 450,
         taxRate: 0.1,
         category: 'accommodation',
         date: '2024-01-22'
+      },
+      {
+        id: '2',
+        description: 'Room Service - Dinner',
+        quantity: 1,
+        unitPrice: 85,
+        totalPrice: 85,
+        taxRate: 0.1,
+        category: 'room-service',
+        date: '2024-01-23'
+      },
+      {
+        id: '3',
+        description: 'Restaurant Charges',
+        quantity: 1,
+        unitPrice: 120,
+        totalPrice: 120,
+        taxRate: 0.1,
+        category: 'restaurant',
+        date: '2024-01-23'
       }
     ],
-    subtotal: 450,
-    taxAmount: 45,
+    subtotal: 655,
+    taxAmount: 65.5,
     discountAmount: 0,
-    totalAmount: 495,
+    totalAmount: 720.5,
+    currency: 'USD',
+    status: 'paid',
+    paymentMethod: 'card',
+    paymentDate: '2024-01-25',
+    paymentReference: 'CARD-001',
+    createdBy: '1',
+    remindersSent: 0,
+    notes: 'Guest checkout - all charges included',
+    terms: 'Payment due upon checkout'
+  },
+  {
+    id: '2',
+    invoiceNumber: 'INV-2024-002',
+    bookingId: '2',
+    guestId: '2',
+    clientName: 'Jane Smith',
+    clientEmail: 'jane@email.com',
+    clientAddress: '456 Oak Avenue, London, UK',
+    issueDate: '2024-01-20',
+    dueDate: '2024-02-20',
+    items: [
+      {
+        id: '1',
+        description: 'VIP Suite 301 - 2 nights (Jan 20-22)',
+        quantity: 2,
+        unitPrice: 400,
+        totalPrice: 800,
+        taxRate: 0.1,
+        category: 'accommodation',
+        date: '2024-01-20'
+      },
+      {
+        id: '2',
+        description: 'Spa Services',
+        quantity: 1,
+        unitPrice: 200,
+        totalPrice: 200,
+        taxRate: 0.1,
+        category: 'spa',
+        date: '2024-01-21'
+      }
+    ],
+    subtotal: 1000,
+    taxAmount: 100,
+    discountAmount: 50, // VIP discount
+    totalAmount: 1050,
     currency: 'USD',
     status: 'paid',
     paymentMethod: 'card',
     paymentDate: '2024-01-22',
+    paymentReference: 'CARD-002',
     createdBy: '1',
-    remindersSent: 0
+    remindersSent: 0,
+    notes: 'VIP guest - 5% discount applied',
+    terms: 'Payment due upon checkout'
+  },
+  {
+    id: '3',
+    invoiceNumber: 'INV-2024-003',
+    guestId: '3',
+    clientName: 'Corporate Event - Johnson Wedding',
+    clientEmail: 'robert@email.com',
+    clientAddress: '789 Event Plaza, Chicago, IL 60601, USA',
+    issueDate: '2024-01-15',
+    dueDate: '2024-02-14',
+    items: [
+      {
+        id: '1',
+        description: 'Grand Ballroom Rental - 5 hours',
+        quantity: 5,
+        unitPrice: 500,
+        totalPrice: 2500,
+        taxRate: 0.1,
+        category: 'banquet',
+        date: '2024-02-14'
+      },
+      {
+        id: '2',
+        description: 'Catering Package - 150 guests',
+        quantity: 150,
+        unitPrice: 45,
+        totalPrice: 6750,
+        taxRate: 0.1,
+        category: 'catering',
+        date: '2024-02-14'
+      },
+      {
+        id: '3',
+        description: 'Audio/Visual Equipment',
+        quantity: 1,
+        unitPrice: 800,
+        totalPrice: 800,
+        taxRate: 0.1,
+        category: 'equipment',
+        date: '2024-02-14'
+      }
+    ],
+    subtotal: 10050,
+    taxAmount: 1005,
+    discountAmount: 500, // Early booking discount
+    totalAmount: 10555,
+    currency: 'USD',
+    status: 'sent',
+    createdBy: '1',
+    remindersSent: 1,
+    lastReminderDate: '2024-01-30',
+    notes: 'Wedding event - early booking discount applied',
+    terms: 'Payment due 30 days from invoice date'
+  },
+  {
+    id: '4',
+    invoiceNumber: 'INV-2024-004',
+    guestId: '4',
+    clientName: 'Alexander Blackwood',
+    clientEmail: 'alex.blackwood@luxurygroup.com',
+    clientAddress: '1 Park Avenue, New York, NY 10016, USA',
+    issueDate: '2024-01-18',
+    dueDate: '2024-02-18',
+    items: [
+      {
+        id: '1',
+        description: 'Presidential Suite 401 - 4 nights (Jan 18-22)',
+        quantity: 4,
+        unitPrice: 550,
+        totalPrice: 2200,
+        taxRate: 0.1,
+        category: 'accommodation',
+        date: '2024-01-18'
+      },
+      {
+        id: '2',
+        description: 'Private Butler Service',
+        quantity: 4,
+        unitPrice: 150,
+        totalPrice: 600,
+        taxRate: 0.1,
+        category: 'service',
+        date: '2024-01-18'
+      },
+      {
+        id: '3',
+        description: 'Helicopter Transfer',
+        quantity: 2,
+        unitPrice: 800,
+        totalPrice: 1600,
+        taxRate: 0.1,
+        category: 'transport',
+        date: '2024-01-18'
+      },
+      {
+        id: '4',
+        description: 'Fine Dining - Private Chef',
+        quantity: 3,
+        unitPrice: 300,
+        totalPrice: 900,
+        taxRate: 0.1,
+        category: 'dining',
+        date: '2024-01-19'
+      }
+    ],
+    subtotal: 5300,
+    taxAmount: 530,
+    discountAmount: 0,
+    totalAmount: 5830,
+    currency: 'USD',
+    status: 'paid',
+    paymentMethod: 'bank-transfer',
+    paymentDate: '2024-01-22',
+    paymentReference: 'WIRE-001',
+    createdBy: '1',
+    remindersSent: 0,
+    notes: 'Diamond VIP guest - premium services',
+    terms: 'Payment due upon checkout'
   }
 ];
 
@@ -78,14 +267,65 @@ const DEMO_PAYMENTS: Payment[] = [
     id: '1',
     invoiceId: '1',
     bookingId: '1',
-    amount: 495,
+    amount: 720.5,
     currency: 'USD',
     method: 'card',
     status: 'completed',
     transactionId: 'txn_123456789',
     reference: 'CARD-001',
     processedBy: '1',
-    processedAt: '2024-01-22T10:30:00Z'
+    processedAt: '2024-01-25T11:30:00Z',
+    notes: 'Guest checkout payment'
+  },
+  {
+    id: '2',
+    invoiceId: '2',
+    bookingId: '2',
+    amount: 1050,
+    currency: 'USD',
+    method: 'card',
+    status: 'completed',
+    transactionId: 'txn_987654321',
+    reference: 'CARD-002',
+    processedBy: '1',
+    processedAt: '2024-01-22T14:15:00Z',
+    notes: 'VIP guest checkout payment'
+  },
+  {
+    id: '3',
+    invoiceId: '4',
+    amount: 5830,
+    currency: 'USD',
+    method: 'bank-transfer',
+    status: 'completed',
+    transactionId: 'wire_555666777',
+    reference: 'WIRE-001',
+    processedBy: '1',
+    processedAt: '2024-01-22T16:45:00Z',
+    notes: 'Diamond VIP guest - wire transfer payment'
+  },
+  {
+    id: '4',
+    amount: 450,
+    currency: 'USD',
+    method: 'cash',
+    status: 'completed',
+    reference: 'CASH-001',
+    processedBy: '2',
+    processedAt: '2024-01-23T09:20:00Z',
+    notes: 'Restaurant payment - cash'
+  },
+  {
+    id: '5',
+    amount: 280,
+    currency: 'USD',
+    method: 'card',
+    status: 'completed',
+    transactionId: 'txn_111222333',
+    reference: 'CARD-003',
+    processedBy: '3',
+    processedAt: '2024-01-24T18:30:00Z',
+    notes: 'Room service payment'
   }
 ];
 
@@ -109,6 +349,77 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       remindersSent: 0
     };
     setInvoices(prev => [newInvoice, ...prev]);
+  };
+
+  const generateInvoiceFromBooking = (bookingId: string, bookingData: any, guestData: any) => {
+    const invoiceItems: InvoiceItem[] = [];
+    let subtotal = 0;
+
+    // Add room charges
+    if (bookingData.charges && bookingData.charges.length > 0) {
+      bookingData.charges.forEach((charge: any, index: number) => {
+        const item: InvoiceItem = {
+          id: (index + 1).toString(),
+          description: charge.description,
+          quantity: 1,
+          unitPrice: charge.amount,
+          totalPrice: charge.amount,
+          taxRate: 0.1,
+          category: charge.category,
+          date: charge.date
+        };
+        invoiceItems.push(item);
+        subtotal += charge.amount;
+      });
+    }
+
+    const taxAmount = subtotal * 0.1;
+    const totalAmount = subtotal + taxAmount;
+
+    const newInvoice: Invoice = {
+      id: Date.now().toString(),
+      invoiceNumber: generateInvoiceNumber(),
+      bookingId: bookingId,
+      guestId: guestData.id,
+      clientName: guestData.name,
+      clientEmail: guestData.email,
+      clientAddress: guestData.address || '',
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      items: invoiceItems,
+      subtotal,
+      taxAmount,
+      discountAmount: 0,
+      totalAmount,
+      currency: bookingData.currency || 'USD',
+      status: 'paid',
+      paymentMethod: 'card',
+      paymentDate: new Date().toISOString().split('T')[0],
+      createdBy: 'system',
+      remindersSent: 0,
+      notes: `Generated from booking ${bookingId}`,
+      terms: 'Payment due upon checkout'
+    };
+
+    setInvoices(prev => [newInvoice, ...prev]);
+
+    // Also create a corresponding payment record
+    const payment: Payment = {
+      id: Date.now().toString(),
+      invoiceId: newInvoice.id,
+      bookingId: bookingId,
+      amount: totalAmount,
+      currency: newInvoice.currency,
+      method: 'card',
+      status: 'completed',
+      transactionId: `txn_${Date.now()}`,
+      reference: `AUTO-${Date.now()}`,
+      processedBy: 'system',
+      processedAt: new Date().toISOString(),
+      notes: 'Auto-generated from booking checkout'
+    };
+
+    setPayments(prev => [payment, ...prev]);
   };
 
   const updateInvoice = (invoiceId: string, updates: Partial<Invoice>) => {
@@ -187,10 +498,28 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
     );
     
     const totalRevenue = filteredInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+    
+    // Calculate revenue by category
     const roomRevenue = filteredInvoices.reduce((sum, invoice) => {
       const roomItems = invoice.items.filter(item => item.category === 'accommodation');
       return sum + roomItems.reduce((itemSum, item) => itemSum + item.totalPrice, 0);
     }, 0);
+    
+    const restaurantRevenue = filteredInvoices.reduce((sum, invoice) => {
+      const restaurantItems = invoice.items.filter(item => 
+        ['restaurant', 'room-service', 'dining', 'catering'].includes(item.category)
+      );
+      return sum + restaurantItems.reduce((itemSum, item) => itemSum + item.totalPrice, 0);
+    }, 0);
+    
+    const banquetRevenue = filteredInvoices.reduce((sum, invoice) => {
+      const banquetItems = invoice.items.filter(item => 
+        ['banquet', 'equipment', 'event'].includes(item.category)
+      );
+      return sum + banquetItems.reduce((itemSum, item) => itemSum + item.totalPrice, 0);
+    }, 0);
+    
+    const otherRevenue = totalRevenue - roomRevenue - restaurantRevenue - banquetRevenue;
     
     const report: FinancialReport = {
       id: Date.now().toString(),
@@ -202,18 +531,18 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       data: {
         totalRevenue,
         roomRevenue,
-        restaurantRevenue: totalRevenue * 0.3, // Mock data
-        banquetRevenue: totalRevenue * 0.2,
-        otherRevenue: totalRevenue * 0.1,
-        totalExpenses: totalRevenue * 0.4,
-        netProfit: totalRevenue * 0.6,
-        occupancyRate: 75,
-        averageDailyRate: 150,
-        revenuePAR: 112.5,
+        restaurantRevenue,
+        banquetRevenue,
+        otherRevenue,
+        totalExpenses: totalRevenue * 0.35, // Estimated expenses
+        netProfit: totalRevenue * 0.65,
+        occupancyRate: 78,
+        averageDailyRate: 185,
+        revenuePAR: 144.3,
         guestCount: filteredInvoices.length,
-        averageStayLength: 2.5,
-        cancellationRate: 5,
-        noShowRate: 2
+        averageStayLength: 2.8,
+        cancellationRate: 4.2,
+        noShowRate: 1.8
       },
       currency: 'USD'
     };
@@ -244,22 +573,46 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
   };
 
   const getRevenueBreakdown = (startDate: string, endDate: string) => {
-    const total = getRevenueByPeriod(startDate, endDate);
-    return {
-      rooms: total * 0.5,
-      restaurant: total * 0.3,
-      banquet: total * 0.15,
-      other: total * 0.05
-    };
+    const filteredInvoices = invoices.filter(invoice => 
+      invoice.issueDate >= startDate && invoice.issueDate <= endDate && invoice.status === 'paid'
+    );
+    
+    let rooms = 0, restaurant = 0, banquet = 0, other = 0;
+    
+    filteredInvoices.forEach(invoice => {
+      invoice.items.forEach(item => {
+        switch (item.category) {
+          case 'accommodation':
+            rooms += item.totalPrice;
+            break;
+          case 'restaurant':
+          case 'room-service':
+          case 'dining':
+          case 'catering':
+            restaurant += item.totalPrice;
+            break;
+          case 'banquet':
+          case 'equipment':
+          case 'event':
+            banquet += item.totalPrice;
+            break;
+          default:
+            other += item.totalPrice;
+        }
+      });
+    });
+    
+    return { rooms, restaurant, banquet, other };
   };
 
   const getPaymentMethodStats = (startDate: string, endDate: string) => {
     const relevantPayments = payments.filter(payment => 
-      payment.processedAt >= startDate && payment.processedAt <= endDate
+      payment.processedAt >= startDate && payment.processedAt <= endDate && payment.status === 'completed'
     );
     
     return relevantPayments.reduce((stats, payment) => {
-      stats[payment.method] = (stats[payment.method] || 0) + payment.amount;
+      const method = payment.method.replace('-', ' ');
+      stats[method] = (stats[method] || 0) + payment.amount;
       return stats;
     }, {} as Record<string, number>);
   };
@@ -292,6 +645,7 @@ export function FinancialProvider({ children }: { children: ReactNode }) {
       deleteInvoice,
       markInvoiceAsPaid,
       sendInvoiceReminder,
+      generateInvoiceFromBooking,
       processPayment,
       refundPayment,
       getPaymentsByInvoice,
