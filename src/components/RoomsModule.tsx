@@ -2580,7 +2580,7 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
                       </button>
                     )}
                     
-                    {currentBook && currentBooking.status === 'checked-in' && (
+                    {currentBooking && currentBooking.status === 'checked-in' &&  (
                       <button
                         onClick={() => {
                           setSelectedBooking(currentBooking);
