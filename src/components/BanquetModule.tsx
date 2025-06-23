@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useHotel } from '../context/HotelContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { BanquetHallManagement } from './BanquetHallManagement';
 import { 
   Users, 
   Calendar, 
@@ -43,6 +44,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
   const [view, setView] = useState<'halls' | 'bookings'>('halls');
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showChargeForm, setShowChargeForm] = useState(false);
+  const [showHallManagement, setShowHallManagement] = useState(false);
   const [selectedHall, setSelectedHall] = useState<BanquetHall | null>(null);
   const [showHallDetails, setShowHallDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -253,11 +255,13 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl max-w-4xl w-full m-4 max-h-[90vh] overflow-y-auto">
           <div className="relative">
-            <img
-              src={selectedHall.photos[0]}
-              alt={selectedHall.name}
-              className="w-full h-80 object-cover rounded-t-2xl"
-            />
+            {selectedHall.photos.length > 0 && (
+              <img
+                src={selectedHall.photos[0]}
+                alt={selectedHall.name}
+                className="w-full h-80 object-cover rounded-t-2xl"
+              />
+            )}
             <button
               onClick={() => {
                 setShowHallDetails(false);
@@ -612,6 +616,13 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
         </div>
         <div className="flex space-x-4">
           <button
+            onClick={() => setShowHallManagement(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            <Eye className="w-4 h-4" />
+            <span>Manage Halls</span>
+          </button>
+          <button
             onClick={() => setShowChargeForm(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
@@ -804,6 +815,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       {showBookingForm && <BookingForm />}
       {showHallDetails && <HallDetailsModal />}
       {showChargeForm && <ChargeForm />}
+      {showHallManagement && <BanquetHallManagement onClose={() => setShowHallManagement(false)} />}
     </div>
   );
 }

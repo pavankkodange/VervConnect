@@ -418,7 +418,7 @@ export function BrandingSettings() {
                 {formatDateTime(getCurrentDateTime())}
               </p>
               <p className="text-sm text-blue-700">
-                Timezone: {branding.timeZone} ({getTimezoneOffset()})
+                Timezone: {branding.timeZone.split('/')[1]?.replace('_', ' ')} Time
               </p>
             </div>
           </div>
