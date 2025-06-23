@@ -84,11 +84,6 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
     }
   };
 
-  // Filter bookings based on date filter
-  const filteredBookings = dateFilter === 'today' 
-    ? banquetBookings.filter(booking => booking.date === today)
-    : banquetBookings;
-
   // Check if a hall is already booked for the given date and time
   const isHallBooked = (hallId: string, date: string, startTime: string, endTime: string): boolean => {
     return banquetBookings.some(booking => {
@@ -116,6 +111,11 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       return false;
     });
   };
+
+  // Filter bookings based on date filter
+  const filteredBookings = dateFilter === 'today' 
+    ? banquetBookings.filter(booking => booking.date === today)
+    : banquetBookings;
 
   const ChargeForm = () => {
     const [formData, setFormData] = useState({
