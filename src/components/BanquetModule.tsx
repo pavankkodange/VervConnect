@@ -47,6 +47,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
   const [showHallDetails, setShowHallDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<string>('');
+  const [bookingError, setBookingError] = useState<string>('');
 
   // Apply filters from dashboard navigation
   useEffect(() => {
@@ -87,6 +88,34 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
   const filteredBookings = dateFilter === 'today' 
     ? banquetBookings.filter(booking => booking.date === today)
     : banquetBookings;
+
+  // Check if a hall is already booked for the given date and time
+  const isHallBooked = (hallId: string, date: string, startTime: string, endTime: string): boolean => {
+    return banquetBookings.some(booking => {
+      // Skip cancelled bookings
+      if (booking.status === 'cancelled') return false;
+      
+      // Check if it's the same hall and date
+      if (booking.hallId === hallId && booking.date === date) {
+        // Check if time periods overlap
+        const bookingStart = booking.startTime;
+        const bookingEnd = booking.endTime;
+        
+        // Overlap occurs if:
+        // - New start time is between existing booking's start and end times
+        // - New end time is between existing booking's start and end times
+        // - New booking completely encompasses existing booking
+        if (
+          (startTime >= bookingStart && startTime < bookingEnd) ||
+          (endTime > bookingStart && endTime <= bookingEnd) ||
+          (startTime <= bookingStart && endTime >= bookingEnd)
+        ) {
+          return true;
+        }
+      }
+      return false;
+    });
+  };
 
   const ChargeForm = () => {
     const [formData, setFormData] = useState({
@@ -369,6 +398,12 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       e.preventDefault();
       const hall = banquetHalls.find(h => h.id === formData.hallId);
       
+      // Check if the hall is already booked for the selected date and time
+      if (isHallBooked(formData.hallId, formData.date, formData.startTime, formData.endTime)) {
+        setBookingError('This hall is already booked for the selected date and time. Please choose a different time or date.');
+        return;
+      }
+      
       if (hall) {
         const hours = Math.ceil(
           (new Date(`1970-01-01T${formData.endTime}`).getTime() - 
@@ -392,6 +427,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
         });
         
         setShowBookingForm(false);
+        setBookingError('');
         setFormData({
           hallId: '', eventName: '', clientName: '', clientEmail: '', clientPhone: '',
           date: '', startTime: '', endTime: '', attendees: '', specialRequirements: ''
@@ -403,6 +439,13 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 max-w-2xl w-full m-4 max-h-[90vh] overflow-y-auto">
           <h3 className="text-2xl font-bold mb-6">New Banquet Booking</h3>
+          
+          {bookingError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {bookingError}
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
@@ -526,7 +569,10 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
             <div className="flex space-x-4 pt-4">
               <button
                 type="button"
-                onClick={() => setShowBookingForm(false)}
+                onClick={() => {
+                  setShowBookingForm(false);
+                  setBookingError('');
+                }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Cancel
