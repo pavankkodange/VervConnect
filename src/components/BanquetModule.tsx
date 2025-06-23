@@ -26,6 +26,8 @@ import {
   Printer
 } from 'lucide-react';
 import { BanquetHall, BanquetBooking } from '../types';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface BanquetModuleProps {
   filters?: {
@@ -48,11 +50,14 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
   const [view, setView] = useState<'halls' | 'bookings'>('halls');
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedHall, setSelectedHall] = useState<BanquetHall | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BanquetBooking | null>(null);
   const [showHallDetails, setShowHallDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<string>('');
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const invoiceRef = React.useRef<HTMLDivElement>(null);
 
   // Apply filters from dashboard navigation
   useEffect(() => {
@@ -259,6 +264,379 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    );
+  };
+
+  const InvoiceModal = () => {
+    if (!selectedBooking) return null;
+    
+    const hall = banquetHalls.find(h => h.id === selectedBooking.hallId);
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${selectedBooking.id.slice(-6)}`;
+    const invoiceDate = new Date().toLocaleDateString();
+    
+    // Calculate tax and total
+    const subtotal = selectedBooking.totalAmount;
+    const taxRate = 0.18; // 18% GST for example
+    const taxAmount = subtotal * taxRate;
+    const grandTotal = subtotal + taxAmount;
+
+    const generatePDF = async () => {
+      if (!invoiceRef.current) return;
+      
+      setIsGeneratingPDF(true);
+      try {
+        // Create a temporary container for PDF generation
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '210mm'; // A4 width
+        tempContainer.style.backgroundColor = 'white';
+        tempContainer.style.fontFamily = 'Arial, sans-serif';
+        tempContainer.style.fontSize = '12px';
+        tempContainer.style.lineHeight = '1.4';
+        tempContainer.style.color = '#000';
+        
+        // Clone the invoice content
+        const invoiceClone = invoiceRef.current.cloneNode(true) as HTMLElement;
+        invoiceClone.style.padding = '20px';
+        invoiceClone.style.maxWidth = 'none';
+        invoiceClone.style.boxShadow = 'none';
+        invoiceClone.style.border = 'none';
+        invoiceClone.style.borderRadius = '0';
+        
+        tempContainer.appendChild(invoiceClone);
+        document.body.appendChild(tempContainer);
+
+        // Generate canvas from HTML
+        const canvas = await html2canvas(tempContainer, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: 794, // A4 width in pixels at 96 DPI
+          height: 1123 // A4 height in pixels at 96 DPI
+        });
+
+        // Create PDF
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        // Save PDF
+        const fileName = `Invoice_${invoiceNumber}_${selectedBooking.clientName.replace(/\s+/g, '_')}.pdf`;
+        pdf.save(fileName);
+
+        // Clean up
+        document.body.removeChild(tempContainer);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF. Please try again.');
+      } finally {
+        setIsGeneratingPDF(false);
+      }
+    };
+
+    const printInvoice = () => {
+      if (!invoiceRef.current) return;
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      const invoiceHTML = invoiceRef.current.innerHTML;
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Invoice - ${invoiceNumber}</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+                font-size: 12px;
+                line-height: 1.4;
+                color: #000;
+              }
+              .no-print { display: none !important; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f5f5f5; }
+              .text-right { text-align: right; }
+              .font-bold { font-weight: bold; }
+              .text-lg { font-size: 14px; }
+              .text-xl { font-size: 16px; }
+              .text-2xl { font-size: 18px; }
+              .text-3xl { font-size: 20px; }
+              .mb-2 { margin-bottom: 8px; }
+              .mb-4 { margin-bottom: 16px; }
+              .mb-6 { margin-bottom: 24px; }
+              .mt-4 { margin-top: 16px; }
+              .mt-6 { margin-top: 24px; }
+              .p-4 { padding: 16px; }
+              .border { border: 1px solid #ddd; }
+              .bg-gray-50 { background-color: #f9f9f9; }
+              .grid { display: grid; }
+              .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+              .gap-4 { gap: 16px; }
+              @media print {
+                body { margin: 0; }
+                .no-print { display: none !important; }
+              }
+            </style>
+          </head>
+          <body>
+            ${invoiceHTML}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <FileText className="w-6 h-6 text-indigo-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Event Invoice</h2>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={generatePDF}
+                disabled={isGeneratingPDF}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {isGeneratingPDF ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>Download PDF</span>
+              </button>
+              <button
+                onClick={printInvoice}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print</span>
+              </button>
+              <button
+                onClick={() => setShowInvoiceModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* Invoice Content */}
+          <div className="p-6">
+            <div ref={invoiceRef} className="bg-white max-w-4xl mx-auto">
+              {/* Header with Logo and Hotel Info */}
+              <div className="border-b-2 border-gray-300 pb-6 mb-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 rounded-lg flex items-center justify-center bg-indigo-600">
+                      <Building className="w-10 h-10 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-bold text-gray-900">Harmony Suites</h1>
+                      <div className="flex items-center space-x-1 mt-1">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <span key={i} className="text-yellow-400 text-lg">★</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-2xl font-bold text-gray-900">INVOICE</h2>
+                    <p className="text-lg font-semibold text-gray-700">#{invoiceNumber}</p>
+                    <p className="text-sm text-gray-600">Date: {invoiceDate}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Hotel Information</h3>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>123 Luxury Avenue</span>
+                      </div>
+                      <div className="ml-6">
+                        Metropolitan City, State 12345
+                      </div>
+                      <div className="ml-6">Country</div>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Phone className="w-4 h-4" />
+                        <span>+1 (555) 123-4567</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-4 h-4" />
+                        <span>info@harmonysuite.com</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Bill To</h3>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4" />
+                        <span className="font-medium">{selectedBooking.clientName}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-4 h-4" />
+                        <span>{selectedBooking.clientEmail}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4" />
+                        <span>{selectedBooking.clientPhone}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Details */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
+                <div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg">
+                  <div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Event Name:</span>
+                        <span className="text-sm font-medium">{selectedBooking.eventName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Venue:</span>
+                        <span className="text-sm font-medium">{hall?.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Attendees:</span>
+                        <span className="text-sm font-medium">{selectedBooking.attendees} guests</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Date:</span>
+                        <span className="text-sm font-medium">{new Date(selectedBooking.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Time:</span>
+                        <span className="text-sm font-medium">{selectedBooking.startTime} - {selectedBooking.endTime}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Status:</span>
+                        <span className={`text-sm font-medium px-2 py-1 rounded-full text-xs ${getStatusColor(selectedBooking.status)}`}>
+                          {selectedBooking.status.replace('-', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Charges Table */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Charges</h3>
+                <table className="w-full border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-900">Description</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right text-sm font-medium text-gray-900">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
+                        {hall?.name} - Event Space Rental
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900 text-right">
+                        {formatCurrency(selectedBooking.totalAmount, selectedBooking.currency)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="mb-6">
+                <div className="flex justify-end">
+                  <div className="w-80">
+                    <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Subtotal:</span>
+                        <span className="text-sm font-medium">{formatCurrency(subtotal, selectedBooking.currency)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Tax ({(taxRate * 100).toFixed(0)}%):</span>
+                        <span className="text-sm font-medium">{formatCurrency(taxAmount, selectedBooking.currency)}</span>
+                      </div>
+                      <div className="border-t border-gray-300 pt-2">
+                        <div className="flex justify-between">
+                          <span className="text-lg font-bold text-gray-900">Total Amount:</span>
+                          <span className="text-lg font-bold text-gray-900">{formatCurrency(grandTotal, selectedBooking.currency)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Information */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="text-sm text-green-700">
+                    <p>Payment Terms: Due upon event completion</p>
+                    <p>Bank Account: Harmony Suites - AC# 123456789</p>
+                    <p>Payment Reference: {invoiceNumber}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t-2 border-gray-300 pt-6 mt-8">
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Thank You!</h4>
+                    <p className="text-sm text-gray-600">
+                      Thank you for choosing Harmony Suites for your event. We look forward to providing you with an exceptional experience.
+                    </p>
+                    <div className="mt-4">
+                      <h5 className="font-medium text-gray-900 text-sm">Cancellation Policy:</h5>
+                      <p className="text-xs text-gray-600 mt-1">Cancellation allowed up to 48 hours before event with full refund. Later cancellations subject to 50% charge.</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">
+                      <p>Questions about this invoice?</p>
+                      <p>Contact us at:</p>
+                      <p className="font-medium">+1 (555) 123-4567</p>
+                      <p className="font-medium">events@harmonysuite.com</p>
+                    </div>
+                    <div className="mt-4 text-xs text-gray-500">
+                      <p>Invoice generated on {invoiceDate}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -794,16 +1172,28 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                         {formatCurrency(booking.totalAmount, booking.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button 
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setShowPaymentForm(true);
-                          }}
-                          className="text-green-600 hover:text-green-900 flex items-center space-x-1"
-                        >
-                          <Receipt className="w-4 h-4" />
-                          <span>Payment</span>
-                        </button>
+                        <div className="flex space-x-2">
+                          <button 
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowInvoiceModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
+                          >
+                            <FileText className="w-4 h-4" />
+                            <span>Invoice</span>
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowPaymentForm(true);
+                            }}
+                            className="text-green-600 hover:text-green-900 flex items-center space-x-1"
+                          >
+                            <Receipt className="w-4 h-4" />
+                            <span>Payment</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -817,6 +1207,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       {showBookingForm && <BookingForm />}
       {showHallDetails && <HallDetailsModal />}
       {showPaymentForm && <PaymentForm />}
+      {showInvoiceModal && <InvoiceModal />}
     </div>
   );
 }
