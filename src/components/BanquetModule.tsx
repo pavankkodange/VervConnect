@@ -1,30 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useHotel } from '../context/HotelContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { 
-  Users, 
-  Calendar, 
-  Plus, 
-  MapPin, 
-  Clock, 
-  Mail, 
-  Phone,
-  Search,
-  Filter,
-  Eye,
-  DollarSign,
-  X,
-  Star,
-  Utensils,
-  Music,
-  Camera,
-  Receipt,
-  CreditCard,
-  CheckCircle,
-  Printer,
-  Download,
-  Cash
-} from 'lucide-react';
+import { Users, Calendar, Plus, MapPin, Clock, Mail, Phone, Search, Filter, Eye, DollarSign, X, Star, Utensils, Music, Camera, Receipt, CreditCard, CheckCircle, Printer, Download, Cast as Cash } from 'lucide-react';
 import { BanquetHall, BanquetBooking } from '../types';
 
 interface BanquetModuleProps {
