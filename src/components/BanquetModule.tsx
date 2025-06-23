@@ -47,8 +47,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
   
   const [view, setView] = useState<'halls' | 'bookings'>('halls');
   const [showBookingForm, setShowBookingForm] = useState(false);
-  const [showChargeForm, setShowChargeForm] = useState(false);
-  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [selectedHall, setSelectedHall] = useState<BanquetHall | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BanquetBooking | null>(null);
   const [showHallDetails, setShowHallDetails] = useState(false);
@@ -95,12 +94,11 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
     ? banquetBookings.filter(booking => booking.date === today)
     : banquetBookings;
 
-  const ChargeForm = () => {
+  const PaymentForm = () => {
     const [formData, setFormData] = useState({
-      bookingId: '',
-      description: '',
-      amount: '',
-      eventName: '',
+      bookingId: selectedBooking ? selectedBooking.id : '',
+      description: selectedBooking ? `Payment for ${selectedBooking.eventName}` : '',
+      amount: selectedBooking ? selectedBooking.totalAmount.toString() : '',
       paymentMethod: 'room-charge' as 'room-charge' | 'cash' | 'card' | 'bank-transfer'
     });
 
@@ -122,18 +120,18 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
         console.log(`Processing ${formData.paymentMethod} payment of ${formData.amount} for ${formData.description}`);
       }
       
-      setShowChargeForm(false);
-      setFormData({ bookingId: '', description: '', amount: '', eventName: '', paymentMethod: 'room-charge' });
-      alert('Banquet payment processed successfully!');
+      setShowPaymentForm(false);
+      setFormData({ bookingId: '', description: '', amount: '', paymentMethod: 'room-charge' });
+      alert('Payment processed successfully!');
     };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 max-w-md w-full m-4">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold">Process Banquet Payment</h3>
+            <h3 className="text-2xl font-bold">Process Payment</h3>
             <button
-              onClick={() => setShowChargeForm(false)}
+              onClick={() => setShowPaymentForm(false)}
               className="p-2 hover:bg-gray-100 rounded-lg"
             >
               <X className="w-5 h-5" />
@@ -217,23 +215,6 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 </select>
               </div>
             )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Event/Service Type</label>
-              <select
-                value={formData.eventName}
-                onChange={(e) => setFormData({ ...formData, eventName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Select service type</option>
-                <option value="banquet-hall">Banquet Hall Rental</option>
-                <option value="catering">Catering Services</option>
-                <option value="decoration">Event Decoration</option>
-                <option value="av-equipment">A/V Equipment</option>
-                <option value="photography">Photography Services</option>
-                <option value="other">Other Event Services</option>
-              </select>
-            </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
@@ -242,7 +223,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                placeholder="e.g., Wedding Reception, Corporate Event Setup"
+                placeholder="e.g., Wedding Reception, Corporate Event"
                 required
               />
             </div>
@@ -265,7 +246,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
             <div className="flex space-x-4 pt-4">
               <button
                 type="button"
-                onClick={() => setShowChargeForm(false)}
+                onClick={() => setShowPaymentForm(false)}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Cancel
@@ -274,203 +255,10 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 type="submit"
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
-                Process Payment
+                Pay Now
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    );
-  };
-
-  const InvoicePreview = () => {
-    if (!selectedBooking) return null;
-    
-    const hall = banquetHalls.find(h => h.id === selectedBooking.hallId);
-    const hours = Math.ceil(
-      (new Date(`1970-01-01T${selectedBooking.endTime}`).getTime() - 
-       new Date(`1970-01-01T${selectedBooking.startTime}`).getTime()) / (1000 * 60 * 60)
-    );
-    
-    // Calculate tax and total
-    const subtotal = selectedBooking.totalAmount;
-    const taxRate = 0.18; // 18% GST for example
-    const taxAmount = subtotal * taxRate;
-    const total = subtotal + taxAmount;
-    
-    const handlePrint = () => {
-      window.print();
-    };
-    
-    const handleDownloadPDF = () => {
-      alert('PDF download functionality would be implemented here');
-      // In a real implementation, this would use jsPDF or similar to generate a PDF
-    };
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">Banquet Hall Invoice</h3>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print</span>
-                </button>
-                <button
-                  onClick={handleDownloadPDF}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download PDF</span>
-                </button>
-                <button
-                  onClick={() => setShowInvoicePreview(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="border-2 border-gray-200 rounded-lg p-8">
-              {/* Invoice Header */}
-              <div className="flex justify-between mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">INVOICE</h2>
-                  <p className="text-gray-600">#{selectedBooking.id.slice(-6)}</p>
-                  <p className="text-gray-600">Date: {new Date().toLocaleDateString()}</p>
-                </div>
-                <div className="text-right">
-                  <h3 className="text-xl font-bold text-gray-900">Harmony Suites</h3>
-                  <p className="text-gray-600">123 Luxury Avenue</p>
-                  <p className="text-gray-600">Metropolitan City, State 12345</p>
-                  <p className="text-gray-600">info@harmonysuite.com</p>
-                </div>
-              </div>
-              
-              {/* Client Information */}
-              <div className="mb-8">
-                <h4 className="text-lg font-semibold text-gray-900 mb-2">Bill To:</h4>
-                <p className="text-gray-800 font-medium">{selectedBooking.clientName}</p>
-                <p className="text-gray-600">{selectedBooking.clientEmail}</p>
-                <p className="text-gray-600">{selectedBooking.clientPhone}</p>
-              </div>
-              
-              {/* Event Details */}
-              <div className="mb-8">
-                <h4 className="text-lg font-semibold text-gray-900 mb-2">Event Details:</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-600">Event Name:</p>
-                    <p className="text-gray-800 font-medium">{selectedBooking.eventName}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Date:</p>
-                    <p className="text-gray-800 font-medium">{new Date(selectedBooking.date).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Time:</p>
-                    <p className="text-gray-800 font-medium">{selectedBooking.startTime} - {selectedBooking.endTime}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Venue:</p>
-                    <p className="text-gray-800 font-medium">{hall?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Attendees:</p>
-                    <p className="text-gray-800 font-medium">{selectedBooking.attendees}</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Invoice Items */}
-              <div className="mb-8">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="py-2 px-4 text-left border border-gray-200">Description</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">Rate</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">Quantity</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="py-2 px-4 border border-gray-200">
-                        {hall?.name} - Banquet Hall Rental
-                      </td>
-                      <td className="py-2 px-4 text-right border border-gray-200">
-                        {formatCurrency(hall?.rate || 0)}
-                      </td>
-                      <td className="py-2 px-4 text-right border border-gray-200">
-                        {hours} hours
-                      </td>
-                      <td className="py-2 px-4 text-right border border-gray-200">
-                        {formatCurrency(subtotal)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Totals */}
-              <div className="mb-8">
-                <div className="flex justify-end">
-                  <div className="w-64">
-                    <div className="flex justify-between py-2">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-medium">{formatCurrency(subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-gray-600">Tax ({(taxRate * 100).toFixed(0)}%):</span>
-                      <span className="font-medium">{formatCurrency(taxAmount)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-t border-gray-200 font-bold">
-                      <span>Total:</span>
-                      <span>{formatCurrency(total)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Payment Information */}
-              <div className="mb-8">
-                <h4 className="text-lg font-semibold text-gray-900 mb-2">Payment Information:</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-600">Status:</p>
-                    <p className="text-green-600 font-medium">Pending Payment</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Due Date:</p>
-                    <p className="text-gray-800 font-medium">{new Date(selectedBooking.date).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Payment Options */}
-              <div className="border-t border-gray-200 pt-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Payment Options:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => {
-                      setShowInvoicePreview(false);
-                      setShowChargeForm(true);
-                    }}
-                    className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Receipt className="w-5 h-5" />
-                    <span>Process Payment Now</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -602,7 +390,10 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 Book This Hall
               </button>
               <button
-                onClick={() => setShowChargeForm(true)}
+                onClick={() => {
+                  setShowHallDetails(false);
+                  setShowPaymentForm(true);
+                }}
                 className="flex-1 min-w-[200px] px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors flex items-center justify-center space-x-2"
               >
                 <Receipt className="w-5 h-5" />
@@ -830,7 +621,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
         </div>
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={() => setShowChargeForm(true)}
+            onClick={() => setShowPaymentForm(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
             <Receipt className="w-4 h-4" />
@@ -1006,7 +797,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                         <button 
                           onClick={() => {
                             setSelectedBooking(booking);
-                            setShowInvoicePreview(true);
+                            setShowPaymentForm(true);
                           }}
                           className="text-green-600 hover:text-green-900 flex items-center space-x-1"
                         >
@@ -1025,8 +816,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
 
       {showBookingForm && <BookingForm />}
       {showHallDetails && <HallDetailsModal />}
-      {showChargeForm && <ChargeForm />}
-      {showInvoicePreview && <InvoicePreview />}
+      {showPaymentForm && <PaymentForm />}
     </div>
   );
 }
