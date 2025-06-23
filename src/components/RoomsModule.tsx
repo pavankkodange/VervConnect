@@ -23,7 +23,9 @@ import {
   ArrowRight, 
   ArrowLeft, 
   Home,
-  Settings
+  Settings,
+  Upload,
+  FileText
 } from 'lucide-react';
 import { Room, Booking, Guest } from '../types';
 
@@ -45,7 +47,8 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
     addBooking, 
     updateBookingStatus, 
     updateRoomStatus,
-    addGuest
+    addGuest,
+    updateGuest
   } = useHotel();
   const { formatCurrency, hotelSettings } = useCurrency();
   
@@ -53,6 +56,7 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
   const [showRoomManagement, setShowRoomManagement] = useState(false);
   const [showNewBookingForm, setShowNewBookingForm] = useState(false);
   const [showBillGenerator, setShowBillGenerator] = useState(false);
+  const [showCheckInForm, setShowCheckInForm] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
@@ -83,6 +87,14 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
     idNumber: ''
   });
   const [isNewGuest, setIsNewGuest] = useState(false);
+  const [checkInFormData, setCheckInFormData] = useState({
+    actualCheckInDate: new Date().toISOString().split('T')[0],
+    actualCheckInTime: new Date().toTimeString().split(' ')[0].slice(0, 5),
+    idProofUploaded: false,
+    idProofUrl: '',
+    notes: ''
+  });
+  const [idProofFile, setIdProofFile] = useState<File | null>(null);
 
   // Apply filters from dashboard navigation
   useEffect(() => {
@@ -156,8 +168,57 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
   };
 
   const handleCheckIn = (booking: Booking) => {
-    updateBookingStatus(booking.id, 'checked-in');
-    updateRoomStatus(booking.roomId, 'occupied');
+    setSelectedBooking(booking);
+    const guest = guests.find(g => g.id === booking.guestId);
+    if (guest) {
+      setSelectedGuest(guest);
+      setShowCheckInForm(true);
+    } else {
+      alert('Error: Guest information not found');
+    }
+  };
+
+  const handleCompleteCheckIn = () => {
+    if (!selectedBooking) return;
+    
+    // Update booking status
+    updateBookingStatus(selectedBooking.id, 'checked-in');
+    updateRoomStatus(selectedBooking.roomId, 'occupied');
+    
+    // Update guest with ID proof if provided
+    if (selectedGuest && checkInFormData.idProofUrl) {
+      const updatedIdDocuments = [
+        ...(selectedGuest.idDocuments || []),
+        {
+          id: Date.now().toString(),
+          type: newGuestFormData.idType as any,
+          documentName: 'ID Document',
+          fileUrl: checkInFormData.idProofUrl,
+          fileType: 'image',
+          fileName: idProofFile?.name || 'id-document.jpg',
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: 'system',
+          verified: true,
+          verifiedBy: 'system',
+          verifiedAt: new Date().toISOString()
+        }
+      ];
+      
+      updateGuest(selectedGuest.id, { idDocuments: updatedIdDocuments });
+    }
+    
+    // Reset form and close
+    setShowCheckInForm(false);
+    setCheckInFormData({
+      actualCheckInDate: new Date().toISOString().split('T')[0],
+      actualCheckInTime: new Date().toTimeString().split(' ')[0].slice(0, 5),
+      idProofUploaded: false,
+      idProofUrl: '',
+      notes: ''
+    });
+    setIdProofFile(null);
+    setSelectedBooking(null);
+    setSelectedGuest(null);
   };
 
   const handleCheckOut = (booking: Booking) => {
@@ -281,6 +342,26 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
       idNumber: ''
     });
     setIsNewGuest(false);
+  };
+
+  const handleIdProofUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // In a real app, this would upload to a server
+    // For demo purposes, we'll create a data URL
+    setIdProofFile(file);
+    
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setCheckInFormData(prev => ({
+        ...prev,
+        idProofUploaded: true,
+        idProofUrl: dataUrl
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const NewBookingForm = () => {
@@ -734,6 +815,145 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
     );
   };
 
+  const CheckInForm = () => {
+    if (!selectedBooking || !selectedGuest) return null;
+    
+    const room = rooms.find(r => r.id === selectedBooking.roomId);
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Guest Check-in</h3>
+              <button
+                onClick={() => setShowCheckInForm(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-blue-50 rounded-xl p-6 mb-6">
+              <h4 className="text-lg font-semibold text-blue-900 mb-3">Booking Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-blue-700">Guest Name</p>
+                  <p className="font-semibold text-blue-900">{selectedGuest.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-blue-700">Room Number</p>
+                  <p className="font-semibold text-blue-900">Room {room?.number}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-blue-700">Check-in Date</p>
+                  <p className="font-semibold text-blue-900">{selectedBooking.checkIn}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-blue-700">Check-out Date</p>
+                  <p className="font-semibold text-blue-900">{selectedBooking.checkOut}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Actual Check-in Date</label>
+                  <input
+                    type="date"
+                    value={checkInFormData.actualCheckInDate}
+                    onChange={(e) => setCheckInFormData({ ...checkInFormData, actualCheckInDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Actual Check-in Time</label>
+                  <input
+                    type="time"
+                    value={checkInFormData.actualCheckInTime}
+                    onChange={(e) => setCheckInFormData({ ...checkInFormData, actualCheckInTime: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Upload ID Proof</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  {checkInFormData.idProofUploaded ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center">
+                        <img 
+                          src={checkInFormData.idProofUrl} 
+                          alt="ID Proof" 
+                          className="max-h-40 rounded-lg border border-gray-200"
+                        />
+                      </div>
+                      <p className="text-sm text-green-600 font-medium">ID proof uploaded successfully</p>
+                      <button
+                        type="button"
+                        onClick={() => setCheckInFormData({ ...checkInFormData, idProofUploaded: false, idProofUrl: '' })}
+                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center">
+                        <FileText className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500">Upload guest ID proof (passport, driver's license, etc.)</p>
+                      <label className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer">
+                        <Upload className="w-4 h-4" />
+                        <span>Upload ID</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleIdProofUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Check-in Notes</label>
+                <textarea
+                  value={checkInFormData.notes}
+                  onChange={(e) => setCheckInFormData({ ...checkInFormData, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  rows={3}
+                  placeholder="Any special notes or requests during check-in"
+                />
+              </div>
+
+              <div className="flex space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckInForm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCompleteCheckIn}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Complete Check-in
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -999,6 +1219,7 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
 
       {showRoomManagement && <RoomManagement onClose={() => setShowRoomManagement(false)} />}
       {showNewBookingForm && <NewBookingForm />}
+      {showCheckInForm && <CheckInForm />}
       {showBillGenerator && selectedBooking && selectedGuest && selectedRoom && (
         <BillGenerator 
           booking={selectedBooking} 
