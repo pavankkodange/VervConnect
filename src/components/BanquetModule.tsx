@@ -18,7 +18,12 @@ import {
   Utensils,
   Music,
   Camera,
-  Receipt
+  Receipt,
+  CreditCard,
+  CheckCircle,
+  Printer,
+  Download,
+  Cash
 } from 'lucide-react';
 import { BanquetHall, BanquetBooking } from '../types';
 
@@ -43,10 +48,13 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
   const [view, setView] = useState<'halls' | 'bookings'>('halls');
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showChargeForm, setShowChargeForm] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [selectedHall, setSelectedHall] = useState<BanquetHall | null>(null);
   const [showHallDetails, setShowHallDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<string>('');
+  const [selectedBooking, setSelectedBooking] = useState<BanquetBooking | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Apply filters from dashboard navigation
   useEffect(() => {
@@ -213,6 +221,428 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
     );
   };
 
+  const PaymentForm = () => {
+    const [formData, setFormData] = useState({
+      paymentMethod: 'card' as 'card' | 'cash' | 'bank-transfer' | 'check' | 'mobile-payment',
+      amount: selectedBooking ? selectedBooking.totalAmount.toString() : '',
+      reference: '',
+      notes: '',
+      receiptEmail: '',
+      cardDetails: {
+        cardNumber: '',
+        cardholderName: '',
+        expiryDate: '',
+        cvv: ''
+      }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      if (!selectedBooking) return;
+      
+      // In a real application, this would process the payment through a payment gateway
+      // For demo purposes, we'll just show a success message
+      
+      // Update the booking status to reflect payment
+      // This would typically be done after payment confirmation from a payment processor
+      
+      setShowPaymentForm(false);
+      setShowReceiptModal(true);
+    };
+
+    if (!selectedBooking) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full m-4">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold">Process Payment</h3>
+            <button
+              onClick={() => setShowPaymentForm(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="mb-6 bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-blue-800 mb-2">Event Details</h4>
+            <p className="text-blue-700"><span className="font-medium">Event:</span> {selectedBooking.eventName}</p>
+            <p className="text-blue-700"><span className="font-medium">Client:</span> {selectedBooking.clientName}</p>
+            <p className="text-blue-700"><span className="font-medium">Total Amount:</span> {formatCurrency(selectedBooking.totalAmount, selectedBooking.currency)}</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, paymentMethod: 'card' })}
+                  className={`p-3 flex flex-col items-center justify-center rounded-lg border-2 ${
+                    formData.paymentMethod === 'card' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <CreditCard className="w-6 h-6 mb-1" />
+                  <span className="text-sm">Card</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, paymentMethod: 'cash' })}
+                  className={`p-3 flex flex-col items-center justify-center rounded-lg border-2 ${
+                    formData.paymentMethod === 'cash' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <Cash className="w-6 h-6 mb-1" />
+                  <span className="text-sm">Cash</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, paymentMethod: 'bank-transfer' })}
+                  className={`p-3 flex flex-col items-center justify-center rounded-lg border-2 ${
+                    formData.paymentMethod === 'bank-transfer' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <DollarSign className="w-6 h-6 mb-1" />
+                  <span className="text-sm">Transfer</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Amount ({selectedBooking.currency})
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                min="0"
+                required
+              />
+            </div>
+
+            {formData.paymentMethod === 'card' && (
+              <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
+                  <input
+                    type="text"
+                    value={formData.cardDetails.cardNumber}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      cardDetails: { ...formData.cardDetails, cardNumber: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="•••• •••• •••• ••••"
+                    maxLength={19}
+                    required={formData.paymentMethod === 'card'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
+                  <input
+                    type="text"
+                    value={formData.cardDetails.cardholderName}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      cardDetails: { ...formData.cardDetails, cardholderName: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    required={formData.paymentMethod === 'card'}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
+                    <input
+                      type="text"
+                      value={formData.cardDetails.expiryDate}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        cardDetails: { ...formData.cardDetails, expiryDate: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      placeholder="MM/YY"
+                      maxLength={5}
+                      required={formData.paymentMethod === 'card'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">CVV</label>
+                    <input
+                      type="text"
+                      value={formData.cardDetails.cvv}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        cardDetails: { ...formData.cardDetails, cvv: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      placeholder="•••"
+                      maxLength={4}
+                      required={formData.paymentMethod === 'card'}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.paymentMethod === 'bank-transfer' && (
+              <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Reference Number</label>
+                  <input
+                    type="text"
+                    value={formData.reference}
+                    onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g., Transaction ID or Reference Number"
+                    required={formData.paymentMethod === 'bank-transfer'}
+                  />
+                </div>
+                <div className="bg-yellow-50 p-3 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <span className="font-medium">Bank Details:</span><br />
+                    Account Name: Harmony Suites Hotel<br />
+                    Account Number: 1234567890<br />
+                    Bank: International Bank<br />
+                    SWIFT/BIC: INTLBANK123
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email for Receipt (Optional)</label>
+              <input
+                type="email"
+                value={formData.receiptEmail}
+                onChange={(e) => setFormData({ ...formData, receiptEmail: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                placeholder="email@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                rows={3}
+                placeholder="Any additional payment information"
+              />
+            </div>
+
+            <div className="flex space-x-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowPaymentForm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2"
+              >
+                <DollarSign className="w-4 h-4" />
+                <span>Process Payment</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const ReceiptModal = () => {
+    if (!selectedBooking) return null;
+
+    const handlePrint = () => {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+      
+      const hall = banquetHalls.find(h => h.id === selectedBooking.hallId);
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Payment Receipt - ${selectedBooking.eventName}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+              .receipt { max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; }
+              .header { text-align: center; margin-bottom: 20px; }
+              .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+              .info-label { font-weight: bold; }
+              .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+              .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              .table th { background-color: #f2f2f2; }
+              .total-row { font-weight: bold; }
+              .footer { margin-top: 40px; text-align: center; font-size: 14px; color: #666; }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .receipt { border: none; }
+                .no-print { display: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="receipt">
+              <div class="header">
+                <h1>Harmony Suites Hotel</h1>
+                <h2>Payment Receipt</h2>
+                <p>Receipt #: BQ-${selectedBooking.id.slice(-6)}</p>
+                <p>Date: ${new Date().toLocaleDateString()}</p>
+              </div>
+              
+              <div class="info-row">
+                <div>
+                  <p><span class="info-label">Client:</span> ${selectedBooking.clientName}</p>
+                  <p><span class="info-label">Email:</span> ${selectedBooking.clientEmail}</p>
+                  <p><span class="info-label">Phone:</span> ${selectedBooking.clientPhone}</p>
+                </div>
+                <div>
+                  <p><span class="info-label">Event:</span> ${selectedBooking.eventName}</p>
+                  <p><span class="info-label">Date:</span> ${new Date(selectedBooking.date).toLocaleDateString()}</p>
+                  <p><span class="info-label">Time:</span> ${selectedBooking.startTime} - ${selectedBooking.endTime}</p>
+                </div>
+              </div>
+              
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th>Details</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Banquet Hall Rental</td>
+                    <td>${hall?.name || 'Banquet Hall'} (${selectedBooking.attendees} guests)</td>
+                    <td>${formatCurrency(selectedBooking.totalAmount * 0.7, selectedBooking.currency)}</td>
+                  </tr>
+                  <tr>
+                    <td>Catering Services</td>
+                    <td>Food and beverages for ${selectedBooking.attendees} guests</td>
+                    <td>${formatCurrency(selectedBooking.totalAmount * 0.2, selectedBooking.currency)}</td>
+                  </tr>
+                  <tr>
+                    <td>Additional Services</td>
+                    <td>Setup, decoration, and equipment</td>
+                    <td>${formatCurrency(selectedBooking.totalAmount * 0.1, selectedBooking.currency)}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="2">Total</td>
+                    <td>${formatCurrency(selectedBooking.totalAmount, selectedBooking.currency)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <div>
+                <p><span class="info-label">Payment Method:</span> Card</p>
+                <p><span class="info-label">Payment Status:</span> Paid</p>
+                <p><span class="info-label">Transaction Reference:</span> TXN-${Date.now().toString().slice(-8)}</p>
+              </div>
+              
+              <div class="footer">
+                <p>Thank you for choosing Harmony Suites Hotel for your event!</p>
+                <p>For any inquiries, please contact us at: info@harmonysuite.com | +1 (555) 123-4567</p>
+              </div>
+            </div>
+            <script>
+              window.onload = function() { window.print(); }
+            </script>
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full m-4">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold">Payment Successful</h3>
+            <button
+              onClick={() => setShowReceiptModal(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="bg-green-50 p-4 rounded-lg mb-6 flex items-center space-x-3">
+            <CheckCircle className="w-6 h-6 text-green-600" />
+            <div>
+              <p className="font-medium text-green-800">Payment Processed Successfully</p>
+              <p className="text-sm text-green-700">Transaction ID: TXN-{Date.now().toString().slice(-8)}</p>
+            </div>
+          </div>
+
+          <div className="border border-gray-200 rounded-lg p-6 mb-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Receipt Details</h4>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Event:</span>
+                <span className="font-medium">{selectedBooking.eventName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Client:</span>
+                <span className="font-medium">{selectedBooking.clientName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Date:</span>
+                <span className="font-medium">{new Date(selectedBooking.date).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Amount:</span>
+                <span className="font-medium">{formatCurrency(selectedBooking.totalAmount, selectedBooking.currency)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Payment Method:</span>
+                <span className="font-medium">Card</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex space-x-4">
+            <button
+              onClick={handlePrint}
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              <Printer className="w-5 h-5" />
+              <span>Print Receipt</span>
+            </button>
+            <button
+              onClick={() => {
+                // In a real app, this would generate and download a PDF
+                alert('Receipt downloaded successfully!');
+              }}
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Download className="w-5 h-5" />
+              <span>Download PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const HallDetailsModal = () => {
     if (!selectedHall) return null;
 
@@ -339,7 +769,10 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 Book This Hall
               </button>
               <button
-                onClick={() => setShowChargeForm(true)}
+                onClick={() => {
+                  setShowHallDetails(false);
+                  setShowChargeForm(true);
+                }}
                 className="px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-colors"
               >
                 Post Charge to Room
@@ -362,7 +795,8 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       startTime: '',
       endTime: '',
       attendees: '',
-      specialRequirements: ''
+      specialRequirements: '',
+      paymentMethod: 'room-charge' as 'room-charge' | 'card' | 'cash' | 'bank-transfer' | 'invoice'
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -375,7 +809,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
            new Date(`1970-01-01T${formData.startTime}`).getTime()) / (1000 * 60 * 60)
         );
         
-        addBanquetBooking({
+        const newBooking = {
           hallId: formData.hallId,
           eventName: formData.eventName,
           clientName: formData.clientName,
@@ -388,14 +822,28 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
           totalAmount: hall.rate * hours,
           currency: hotelSettings.baseCurrency,
           specialRequirements: formData.specialRequirements,
-          status: 'confirmed'
-        });
+          status: 'confirmed' as const
+        };
         
-        setShowBookingForm(false);
-        setFormData({
-          hallId: '', eventName: '', clientName: '', clientEmail: '', clientPhone: '',
-          date: '', startTime: '', endTime: '', attendees: '', specialRequirements: ''
-        });
+        addBanquetBooking(newBooking);
+        
+        // If payment method is not room charge, show payment form
+        if (formData.paymentMethod !== 'room-charge') {
+          // In a real app, we would save the booking first, then process payment
+          setSelectedBooking({
+            ...newBooking,
+            id: Date.now().toString() // Temporary ID for demo
+          });
+          setShowBookingForm(false);
+          setShowPaymentForm(true);
+        } else {
+          setShowBookingForm(false);
+          setFormData({
+            hallId: '', eventName: '', clientName: '', clientEmail: '', clientPhone: '',
+            date: '', startTime: '', endTime: '', attendees: '', specialRequirements: '',
+            paymentMethod: 'room-charge'
+          });
+        }
       }
     };
 
@@ -403,7 +851,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 max-w-2xl w-full m-4 max-h-[90vh] overflow-y-auto">
           <h3 className="text-2xl font-bold mb-6">New Banquet Booking</h3>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Banquet Hall</label>
@@ -521,6 +969,96 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                   placeholder="Catering, decorations, A/V equipment, etc."
                 />
               </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <label className={`flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer ${
+                    formData.paymentMethod === 'room-charge' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="paymentMethod" 
+                      value="room-charge"
+                      checked={formData.paymentMethod === 'room-charge'}
+                      onChange={() => setFormData({ ...formData, paymentMethod: 'room-charge' })}
+                      className="sr-only"
+                    />
+                    <Receipt className="w-6 h-6 mb-1" />
+                    <span className="text-sm">Room Charge</span>
+                  </label>
+                  
+                  <label className={`flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer ${
+                    formData.paymentMethod === 'card' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="paymentMethod" 
+                      value="card"
+                      checked={formData.paymentMethod === 'card'}
+                      onChange={() => setFormData({ ...formData, paymentMethod: 'card' })}
+                      className="sr-only"
+                    />
+                    <CreditCard className="w-6 h-6 mb-1" />
+                    <span className="text-sm">Card</span>
+                  </label>
+                  
+                  <label className={`flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer ${
+                    formData.paymentMethod === 'cash' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="paymentMethod" 
+                      value="cash"
+                      checked={formData.paymentMethod === 'cash'}
+                      onChange={() => setFormData({ ...formData, paymentMethod: 'cash' })}
+                      className="sr-only"
+                    />
+                    <Cash className="w-6 h-6 mb-1" />
+                    <span className="text-sm">Cash</span>
+                  </label>
+                  
+                  <label className={`flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer ${
+                    formData.paymentMethod === 'bank-transfer' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="paymentMethod" 
+                      value="bank-transfer"
+                      checked={formData.paymentMethod === 'bank-transfer'}
+                      onChange={() => setFormData({ ...formData, paymentMethod: 'bank-transfer' })}
+                      className="sr-only"
+                    />
+                    <DollarSign className="w-6 h-6 mb-1" />
+                    <span className="text-sm">Bank Transfer</span>
+                  </label>
+                  
+                  <label className={`flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer ${
+                    formData.paymentMethod === 'invoice' 
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <input 
+                      type="radio" 
+                      name="paymentMethod" 
+                      value="invoice"
+                      checked={formData.paymentMethod === 'invoice'}
+                      onChange={() => setFormData({ ...formData, paymentMethod: 'invoice' })}
+                      className="sr-only"
+                    />
+                    <Download className="w-6 h-6 mb-1" />
+                    <span className="text-sm">Invoice</span>
+                  </label>
+                </div>
+              </div>
             </div>
             
             <div className="flex space-x-4 pt-4">
@@ -535,7 +1073,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 type="submit"
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
               >
-                Create Booking
+                {formData.paymentMethod === 'room-charge' ? 'Create Booking' : 'Continue to Payment'}
               </button>
             </div>
           </form>
@@ -739,12 +1277,23 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                         {formatCurrency(booking.totalAmount, booking.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button 
-                          onClick={() => setShowChargeForm(true)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          Bill to Room
-                        </button>
+                        <div className="flex space-x-2">
+                          <button 
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowPaymentForm(true);
+                            }}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => setShowChargeForm(true)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -758,6 +1307,8 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       {showBookingForm && <BookingForm />}
       {showHallDetails && <HallDetailsModal />}
       {showChargeForm && <ChargeForm />}
+      {showPaymentForm && <PaymentForm />}
+      {showReceiptModal && <ReceiptModal />}
     </div>
   );
 }
