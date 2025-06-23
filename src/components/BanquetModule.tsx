@@ -17,7 +17,10 @@ import {
   Utensils,
   Music,
   Camera,
-  Receipt
+  Receipt,
+  CreditCard,
+  Building,
+  Banknote
 } from 'lucide-react';
 import { BanquetHall, BanquetBooking } from '../types';
 
@@ -116,7 +119,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
       
       setShowChargeForm(false);
       setFormData({ bookingId: '', description: '', amount: '', eventName: '', paymentMethod: 'room-charge' });
-      alert('Banquet charge processed successfully!');
+      alert('Banquet payment processed successfully!');
     };
 
     return (
@@ -134,29 +137,84 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Guest Room (for room charge)</label>
-              <select
-                value={formData.bookingId}
-                onChange={(e) => setFormData({ ...formData, bookingId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                required={formData.paymentMethod === 'room-charge'}
-                disabled={formData.paymentMethod !== 'room-charge'}
-              >
-                <option value="">Select a room</option>
-                {activeBookings.map((booking) => {
-                  const guest = guests.find(g => g.id === booking.guestId);
-                  const roomNumber = booking.roomId;
-                  return (
-                    <option key={booking.id} value={booking.id}>
-                      Room {roomNumber} - {guest?.name}
-                    </option>
-                  );
-                })}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, paymentMethod: 'room-charge' })}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    formData.paymentMethod === 'room-charge'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Receipt className="w-5 h-5 mx-auto mb-1" />
+                  <p className="text-sm font-medium">Room Charge</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, paymentMethod: 'cash' })}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    formData.paymentMethod === 'cash'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Banknote className="w-5 h-5 mx-auto mb-1" />
+                  <p className="text-sm font-medium">Cash</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, paymentMethod: 'card' })}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    formData.paymentMethod === 'card'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <CreditCard className="w-5 h-5 mx-auto mb-1" />
+                  <p className="text-sm font-medium">Credit Card</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, paymentMethod: 'bank-transfer' })}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    formData.paymentMethod === 'bank-transfer'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Building className="w-5 h-5 mx-auto mb-1" />
+                  <p className="text-sm font-medium">Bank Transfer</p>
+                </button>
+              </div>
             </div>
 
+            {formData.paymentMethod === 'room-charge' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Guest Room</label>
+                <select
+                  value={formData.bookingId}
+                  onChange={(e) => setFormData({ ...formData, bookingId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  required={formData.paymentMethod === 'room-charge'}
+                >
+                  <option value="">Select a room</option>
+                  {activeBookings.map((booking) => {
+                    const guest = guests.find(g => g.id === booking.guestId);
+                    const roomNumber = booking.roomId;
+                    return (
+                      <option key={booking.id} value={booking.id}>
+                        Room {roomNumber} - {guest?.name}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Event/Service</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Event/Service Type</label>
               <select
                 value={formData.eventName}
                 onChange={(e) => setFormData({ ...formData, eventName: e.target.value })}
@@ -197,31 +255,6 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 min="0"
                 required
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { id: 'room-charge', name: 'Room Charge', icon: 'bed' },
-                  { id: 'cash', name: 'Cash', icon: 'dollar' },
-                  { id: 'card', name: 'Credit Card', icon: 'credit-card' },
-                  { id: 'bank-transfer', name: 'Bank Transfer', icon: 'building' }
-                ].map((method) => (
-                  <button
-                    key={method.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, paymentMethod: method.id as any })}
-                    className={`p-3 rounded-lg border-2 text-center transition-all ${
-                      formData.paymentMethod === method.id
-                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <p className="text-sm font-medium">{method.name}</p>
-                  </button>
-                ))}
-              </div>
             </div>
             
             <div className="flex space-x-4 pt-4">
