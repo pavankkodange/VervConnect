@@ -493,7 +493,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                     <h3 className="font-semibold text-gray-900 mb-2">Bill To</h3>
                     <div className="text-sm text-gray-600 space-y-1">
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4" />
+                        <Users className="w-4 h-4" />
                         <span className="font-medium">{selectedBooking.clientName}</span>
                       </div>
                       <div className="flex items-center space-x-2">
