@@ -34,7 +34,8 @@ import {
   CreditCard,
   Receipt,
   UserPlus,
-  UserCheck
+  UserCheck,
+  Settings
 } from 'lucide-react';
 import { Room, Booking, Guest } from '../types';
 
