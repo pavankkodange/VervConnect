@@ -3,8 +3,6 @@ import { useHotel } from '../context/HotelContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { 
   Users, 
   Calendar, 
@@ -25,14 +23,11 @@ import {
   Receipt,
   Download,
   Printer,
-  CreditCard,
-  Landmark,
-  CheckCircle,
-  User as UserIcon,
-  Building,
-  FileText
+  Send
 } from 'lucide-react';
 import { BanquetHall, BanquetBooking } from '../types';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface BanquetModuleProps {
   filters?: {
@@ -50,19 +45,19 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
     guests,
     addRoomCharge
   } = useHotel();
-  const { formatCurrency, hotelSettings } = useCurrency();
+  const { formatCurrency, hotelSettings, convertAmount, getCurrencySymbol } = useCurrency();
   const { user } = useAuth();
-  const { branding, formatDateTime } = useBranding();
+  const { branding, formatDateTime, getCurrentDateTime } = useBranding();
   
   const [view, setView] = useState<'halls' | 'bookings'>('halls');
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showChargeForm, setShowChargeForm] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedHall, setSelectedHall] = useState<BanquetHall | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BanquetBooking | null>(null);
   const [showHallDetails, setShowHallDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<string>('');
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<BanquetBooking | null>(null);
 
   // Apply filters from dashboard navigation
   useEffect(() => {
@@ -229,487 +224,6 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
     );
   };
 
-  const InvoiceModal = () => {
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'bank-transfer' | 'room-charge'>('card');
-    const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed'>('pending');
-    const invoiceRef = React.useRef<HTMLDivElement>(null);
-
-    if (!selectedBooking) return null;
-    
-    const hall = banquetHalls.find(h => h.id === selectedBooking.hallId);
-    
-    // Calculate hours
-    const startTime = new Date(`1970-01-01T${selectedBooking.startTime}`);
-    const endTime = new Date(`1970-01-01T${selectedBooking.endTime}`);
-    const hours = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60));
-    
-    // Calculate subtotal, tax, and total
-    const subtotal = selectedBooking.totalAmount;
-    const taxRate = 0.18; // 18% GST
-    const taxAmount = subtotal * taxRate;
-    const total = subtotal + taxAmount;
-    
-    // Generate invoice number
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${selectedBooking.id.slice(-4)}`;
-    const invoiceDate = new Date().toISOString().split('T')[0];
-
-    const generatePDF = async () => {
-      if (!invoiceRef.current) return;
-      
-      setIsGenerating(true);
-      try {
-        const canvas = await html2canvas(invoiceRef.current, {
-          scale: 2,
-          useCORS: true,
-          logging: false
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 210;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        pdf.save(`Invoice_${invoiceNumber}_${selectedBooking.clientName.replace(/\s+/g, '_')}.pdf`);
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-        alert('Error generating PDF. Please try again.');
-      } finally {
-        setIsGenerating(false);
-      }
-    };
-
-    const printInvoice = () => {
-      if (!invoiceRef.current) return;
-      
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
-      
-      const invoiceHTML = invoiceRef.current.innerHTML;
-      
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Invoice - ${invoiceNumber}</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                margin: 0;
-                padding: 20px;
-                font-size: 12px;
-                line-height: 1.4;
-                color: #000;
-              }
-              .no-print { display: none !important; }
-              table { border-collapse: collapse; width: 100%; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f5f5f5; }
-              .text-right { text-align: right; }
-              .font-bold { font-weight: bold; }
-              .text-lg { font-size: 14px; }
-              .text-xl { font-size: 16px; }
-              .text-2xl { font-size: 18px; }
-              .text-3xl { font-size: 20px; }
-              .mb-2 { margin-bottom: 8px; }
-              .mb-4 { margin-bottom: 16px; }
-              .mb-6 { margin-bottom: 24px; }
-              .mt-4 { margin-top: 16px; }
-              .mt-6 { margin-top: 24px; }
-              .p-4 { padding: 16px; }
-              .border { border: 1px solid #ddd; }
-              .bg-gray-50 { background-color: #f9f9f9; }
-              .grid { display: grid; }
-              .grid-cols-2 { grid-template-columns: 1fr 1fr; }
-              .gap-4 { gap: 16px; }
-              @media print {
-                body { margin: 0; }
-                .no-print { display: none !important; }
-              }
-            </style>
-          </head>
-          <body>
-            ${invoiceHTML}
-          </body>
-        </html>
-      `);
-      
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    };
-
-    const processPayment = () => {
-      setPaymentStatus('processing');
-      
-      // Simulate payment processing
-      setTimeout(() => {
-        setPaymentStatus('completed');
-      }, 1500);
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
-                <FileText className="w-6 h-6 text-indigo-600" />
-                <span>Event Invoice</span>
-              </h2>
-              <button
-                onClick={() => {
-                  setShowInvoiceModal(false);
-                  setSelectedBooking(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-
-          {paymentStatus === 'pending' && (
-            <div className="p-6 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Method</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {[
-                  { id: 'card', name: 'Credit Card', icon: CreditCard },
-                  { id: 'cash', name: 'Cash', icon: DollarSign },
-                  { id: 'bank-transfer', name: 'Bank Transfer', icon: Landmark },
-                  { id: 'room-charge', name: 'Charge to Room', icon: Building }
-                ].map((method) => {
-                  const Icon = method.icon;
-                  return (
-                    <button
-                      key={method.id}
-                      onClick={() => setPaymentMethod(method.id as any)}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        paymentMethod === method.id
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <Icon className="w-6 h-6 mx-auto mb-2" />
-                      <p className="text-sm font-medium">{method.name}</p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {paymentMethod === 'room-charge' && (
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-800 mb-2">Charge to Guest Room</h4>
-                  <div className="space-y-2">
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="">Select a room</option>
-                      {bookings.filter(b => b.status === 'checked-in').map((booking) => {
-                        const guest = guests.find(g => g.id === booking.guestId);
-                        return (
-                          <option key={booking.id} value={booking.id}>
-                            Room {booking.roomId} - {guest?.name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={processPayment}
-                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2"
-              >
-                <DollarSign className="w-5 h-5" />
-                <span>Process Payment ({formatCurrency(total)})</span>
-              </button>
-            </div>
-          )}
-
-          {paymentStatus === 'processing' && (
-            <div className="p-6 border-b border-gray-200 bg-blue-50">
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-                <h3 className="text-lg font-semibold text-indigo-800">Processing Payment</h3>
-                <p className="text-indigo-600">Please wait while we process your payment...</p>
-              </div>
-            </div>
-          )}
-
-          {paymentStatus === 'completed' && (
-            <div className="p-6 border-b border-gray-200 bg-green-50">
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="bg-green-100 p-3 rounded-full">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-green-800">Payment Successful</h3>
-                  <p className="text-green-600">Your payment of {formatCurrency(total)} has been processed successfully.</p>
-                </div>
-              </div>
-              
-              <div className="flex space-x-4">
-                <button
-                  onClick={generatePDF}
-                  disabled={isGenerating}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {isGenerating ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )}
-                  <span>Download PDF</span>
-                </button>
-                <button
-                  onClick={printInvoice}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print Invoice</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="p-6">
-            <div ref={invoiceRef} className="bg-white max-w-4xl mx-auto">
-              {/* Header with Logo and Hotel Info */}
-              <div className="border-b-2 border-gray-300 pb-6 mb-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-4">
-                    {branding.logoUrl ? (
-                      <img
-                        src={branding.logoUrl}
-                        alt={`${branding.hotelName} Logo`}
-                        className="h-16 w-auto"
-                      />
-                    ) : (
-                      <div 
-                        className="w-16 h-16 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: branding.primaryColor }}
-                      >
-                        <Building className="w-10 h-10 text-white" />
-                      </div>
-                    )}
-                    <div>
-                      <h1 className="text-3xl font-bold text-gray-900">{branding.hotelName}</h1>
-                      <div className="flex items-center space-x-1 mt-1">
-                        {Array.from({ length: branding.starRating }, (_, i) => (
-                          <span key={i} className="text-yellow-400 text-lg">★</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="text-2xl font-bold text-gray-900">INVOICE</h2>
-                    <p className="text-lg font-semibold text-gray-700">#{invoiceNumber}</p>
-                    <p className="text-sm text-gray-600">Date: {invoiceDate}</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-8">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Hotel Information</h3>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{branding.address.street}</span>
-                      </div>
-                      <div className="ml-6">
-                        {branding.address.city}, {branding.address.state} {branding.address.zipCode}
-                      </div>
-                      <div className="ml-6">{branding.address.country}</div>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Phone className="w-4 h-4" />
-                        <span>{branding.contact.phone}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Mail className="w-4 h-4" />
-                        <span>{branding.contact.email}</span>
-                      </div>
-                      {branding.licenseNumber && (
-                        <div className="mt-2 text-xs">
-                          License: {branding.licenseNumber}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Bill To</h3>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <UserIcon className="w-4 h-4" />
-                        <span className="font-medium">{selectedBooking.clientName}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Mail className="w-4 h-4" />
-                        <span>{selectedBooking.clientEmail}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Phone className="w-4 h-4" />
-                        <span>{selectedBooking.clientPhone}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Event Details */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
-                <div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg">
-                  <div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Event Name:</span>
-                        <span className="text-sm font-medium">{selectedBooking.eventName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Venue:</span>
-                        <span className="text-sm font-medium">{hall?.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Attendees:</span>
-                        <span className="text-sm font-medium">{selectedBooking.attendees} guests</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Date:</span>
-                        <span className="text-sm font-medium">{new Date(selectedBooking.date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Time:</span>
-                        <span className="text-sm font-medium">{selectedBooking.startTime} - {selectedBooking.endTime}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Duration:</span>
-                        <span className="text-sm font-medium">{hours} hours</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Charges Table */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Charges</h3>
-                <table className="w-full border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-900">Description</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-900">Quantity</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-900">Rate</th>
-                      <th className="border border-gray-300 px-4 py-2 text-right text-sm font-medium text-gray-900">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
-                        {hall?.name} - Banquet Hall Rental
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
-                        {hours} hours
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
-                        {formatCurrency(hall?.rate || 0, hotelSettings.baseCurrency)}/hour
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900 text-right">
-                        {formatCurrency(subtotal, hotelSettings.baseCurrency)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Totals */}
-              <div className="mb-6">
-                <div className="flex justify-end">
-                  <div className="w-80">
-                    <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Subtotal:</span>
-                        <span className="text-sm font-medium">{formatCurrency(subtotal, hotelSettings.baseCurrency)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Tax ({(taxRate * 100).toFixed(0)}%):</span>
-                        <span className="text-sm font-medium">{formatCurrency(taxAmount, hotelSettings.baseCurrency)}</span>
-                      </div>
-                      <div className="border-t border-gray-300 pt-2">
-                        <div className="flex justify-between">
-                          <span className="text-lg font-bold text-gray-900">Total Amount:</span>
-                          <span className="text-lg font-bold text-gray-900">{formatCurrency(total, hotelSettings.baseCurrency)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Information */}
-              {paymentStatus === 'completed' && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="font-medium text-green-800">Payment Status: PAID</span>
-                    </div>
-                    <div className="text-sm text-green-700">
-                      <p>Payment Method: {paymentMethod === 'card' ? 'Credit Card' : 
-                                          paymentMethod === 'cash' ? 'Cash' : 
-                                          paymentMethod === 'bank-transfer' ? 'Bank Transfer' : 
-                                          'Charged to Room'}</p>
-                      <p>Transaction Date: {formatDateTime(new Date().toISOString())}</p>
-                      <p>Processed by: {user?.name}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Footer */}
-              <div className="border-t-2 border-gray-300 pt-6 mt-8">
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Thank You!</h4>
-                    <p className="text-sm text-gray-600">
-                      Thank you for choosing {branding.hotelName} for your event. We hope you had a wonderful experience and look forward to hosting your future events.
-                    </p>
-                    {branding.policies.cancellationPolicy && (
-                      <div className="mt-4">
-                        <h5 className="font-medium text-gray-900 text-sm">Cancellation Policy:</h5>
-                        <p className="text-xs text-gray-600 mt-1">{branding.policies.cancellationPolicy}</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">
-                      <p>Questions about this invoice?</p>
-                      <p>Contact us at:</p>
-                      <p className="font-medium">{branding.contact.phone}</p>
-                      <p className="font-medium">{branding.contact.email}</p>
-                    </div>
-                    <div className="mt-4 text-xs text-gray-500">
-                      <p>Invoice generated on {formatDateTime(new Date().toISOString())}</p>
-                      <p>by {user?.name} - {user?.role}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const HallDetailsModal = () => {
     if (!selectedHall) return null;
 
@@ -754,7 +268,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold text-green-600">{formatCurrency(selectedHall.rate, hotelSettings.baseCurrency)}</p>
+                <p className="text-3xl font-bold text-green-600">{formatCurrency(selectedHall.rate)}</p>
                 <p className="text-sm text-gray-500">per hour</p>
               </div>
             </div>
@@ -913,7 +427,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                   <option value="">Select a hall</option>
                   {banquetHalls.map((hall) => (
                     <option key={hall.id} value={hall.id}>
-                      {hall.name} - Capacity: {hall.capacity} ({formatCurrency(hall.rate, hotelSettings.baseCurrency)}/hour)
+                      {hall.name} - Capacity: {hall.capacity} ({formatCurrency(hall.rate)}/hour)
                     </option>
                   ))}
                 </select>
@@ -1041,6 +555,548 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
     );
   };
 
+  const InvoiceModal = () => {
+    if (!selectedBooking) return null;
+    
+    const hall = banquetHalls.find(h => h.id === selectedBooking.hallId);
+    const invoiceRef = React.useRef<HTMLDivElement>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [emailSent, setEmailSent] = useState(false);
+    const [showEmailForm, setShowEmailForm] = useState(false);
+    const [emailData, setEmailData] = useState({
+      to: selectedBooking.clientEmail,
+      subject: `Invoice - ${branding.hotelName} - Event: ${selectedBooking.eventName}`,
+      message: `Dear ${selectedBooking.clientName},\n\nThank you for choosing ${branding.hotelName} for your event. Please find your invoice attached.\n\nWe look forward to hosting your event.\n\nBest regards,\n${branding.hotelName} Team`
+    });
+
+    // Calculate invoice details
+    const eventDate = new Date(selectedBooking.date);
+    const startTime = selectedBooking.startTime;
+    const endTime = selectedBooking.endTime;
+    
+    // Calculate hours
+    const startHour = parseInt(startTime.split(':')[0]);
+    const startMinute = parseInt(startTime.split(':')[1]);
+    const endHour = parseInt(endTime.split(':')[0]);
+    const endMinute = parseInt(endTime.split(':')[1]);
+    
+    let hours = endHour - startHour;
+    if (endMinute < startMinute) {
+      hours -= 1;
+    }
+    if (hours < 0) {
+      hours += 24; // Handle overnight events
+    }
+    
+    // Tax calculation (10% for demo)
+    const subtotal = selectedBooking.totalAmount;
+    const taxRate = 0.10;
+    const taxAmount = subtotal * taxRate;
+    const grandTotal = subtotal + taxAmount;
+
+    // Invoice number generation
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${selectedBooking.id.slice(-6)}`;
+    const invoiceDate = formatDateTime(getCurrentDateTime());
+
+    const generatePDF = async () => {
+      if (!invoiceRef.current) return;
+
+      setIsGenerating(true);
+      try {
+        // Create a temporary container for PDF generation
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '210mm'; // A4 width
+        tempContainer.style.backgroundColor = 'white';
+        tempContainer.style.fontFamily = 'Arial, sans-serif';
+        tempContainer.style.fontSize = '12px';
+        tempContainer.style.lineHeight = '1.4';
+        tempContainer.style.color = '#000';
+        
+        // Clone the invoice content
+        const invoiceClone = invoiceRef.current.cloneNode(true) as HTMLElement;
+        invoiceClone.style.padding = '20px';
+        invoiceClone.style.maxWidth = 'none';
+        invoiceClone.style.boxShadow = 'none';
+        invoiceClone.style.border = 'none';
+        invoiceClone.style.borderRadius = '0';
+        
+        tempContainer.appendChild(invoiceClone);
+        document.body.appendChild(tempContainer);
+
+        // Generate canvas from HTML
+        const canvas = await html2canvas(tempContainer, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: 794, // A4 width in pixels at 96 DPI
+          height: 1123 // A4 height in pixels at 96 DPI
+        });
+
+        // Create PDF
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        // Save PDF
+        const fileName = `Invoice_${invoiceNumber}_${selectedBooking.eventName.replace(/\s+/g, '_')}.pdf`;
+        pdf.save(fileName);
+
+        // Clean up
+        document.body.removeChild(tempContainer);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF. Please try again.');
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    const printInvoice = () => {
+      if (!invoiceRef.current) return;
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      const invoiceHTML = invoiceRef.current.innerHTML;
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Invoice - ${invoiceNumber}</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+                font-size: 12px;
+                line-height: 1.4;
+                color: #000;
+              }
+              .no-print { display: none !important; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f5f5f5; }
+              .text-right { text-align: right; }
+              .font-bold { font-weight: bold; }
+              .text-lg { font-size: 14px; }
+              .text-xl { font-size: 16px; }
+              .text-2xl { font-size: 18px; }
+              .text-3xl { font-size: 20px; }
+              .mb-2 { margin-bottom: 8px; }
+              .mb-4 { margin-bottom: 16px; }
+              .mb-6 { margin-bottom: 24px; }
+              .mt-4 { margin-top: 16px; }
+              .mt-6 { margin-top: 24px; }
+              .p-4 { padding: 16px; }
+              .border { border: 1px solid #ddd; }
+              .bg-gray-50 { background-color: #f9f9f9; }
+              .grid { display: grid; }
+              .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+              .gap-4 { gap: 16px; }
+              @media print {
+                body { margin: 0; }
+                .no-print { display: none !important; }
+              }
+            </style>
+          </head>
+          <body>
+            ${invoiceHTML}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+
+    const sendEmail = async () => {
+      setIsGenerating(true);
+      try {
+        // In a real application, this would send the email via an API
+        // For demo purposes, we'll simulate the email sending
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setEmailSent(true);
+        setShowEmailForm(false);
+        alert(`Invoice has been sent to ${emailData.to}`);
+      } catch (error) {
+        console.error('Error sending email:', error);
+        alert('Error sending email. Please try again.');
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    const EmailForm = () => (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl max-w-md w-full m-4">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Send Invoice via Email</h3>
+              <button
+                onClick={() => setShowEmailForm(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                <input
+                  type="email"
+                  value={emailData.to}
+                  onChange={(e) => setEmailData({ ...emailData, to: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                <input
+                  type="text"
+                  value={emailData.subject}
+                  onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                <textarea
+                  value={emailData.message}
+                  onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  rows={6}
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setShowEmailForm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendEmail}
+                  disabled={isGenerating}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Send Email</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <Receipt className="w-6 h-6 text-indigo-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Event Invoice</h2>
+            </div>
+            <button
+              onClick={() => {
+                setShowInvoiceModal(false);
+                setSelectedBooking(null);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={generatePDF}
+                disabled={isGenerating}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>Download PDF</span>
+              </button>
+
+              <button
+                onClick={printInvoice}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print</span>
+              </button>
+
+              <button
+                onClick={() => setShowEmailForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Email to Client</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Invoice Content */}
+          <div className="p-6">
+            <div ref={invoiceRef} className="bg-white max-w-4xl mx-auto">
+              {/* Header with Logo and Hotel Info */}
+              <div className="border-b-2 border-gray-300 pb-6 mb-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-4">
+                    {branding.logoUrl ? (
+                      <img
+                        src={branding.logoUrl}
+                        alt={`${branding.hotelName} Logo`}
+                        className="h-16 w-auto"
+                      />
+                    ) : (
+                      <div 
+                        className="w-16 h-16 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: branding.primaryColor }}
+                      >
+                        <Users className="w-10 h-10 text-white" />
+                      </div>
+                    )}
+                    <div>
+                      <h1 className="text-3xl font-bold text-gray-900">{branding.hotelName}</h1>
+                      <div className="flex items-center space-x-1 mt-1">
+                        {Array.from({ length: branding.starRating }, (_, i) => (
+                          <span key={i} className="text-yellow-400 text-lg">★</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-2xl font-bold text-gray-900">INVOICE</h2>
+                    <p className="text-lg font-semibold text-gray-700">#{invoiceNumber}</p>
+                    <p className="text-sm text-gray-600">Date: {invoiceDate}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Hotel Information</h3>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>{branding.address.street}</span>
+                      </div>
+                      <div className="ml-6">
+                        {branding.address.city}, {branding.address.state} {branding.address.zipCode}
+                      </div>
+                      <div className="ml-6">{branding.address.country}</div>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Phone className="w-4 h-4" />
+                        <span>{branding.contact.phone}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-4 h-4" />
+                        <span>{branding.contact.email}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Bill To</h3>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="font-medium">{selectedBooking.clientName}</div>
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-4 h-4" />
+                        <span>{selectedBooking.clientEmail}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4" />
+                        <span>{selectedBooking.clientPhone}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Details */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
+                <div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg">
+                  <div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Event Name:</span>
+                        <span className="text-sm font-medium">{selectedBooking.eventName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Venue:</span>
+                        <span className="text-sm font-medium">{hall?.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Capacity:</span>
+                        <span className="text-sm font-medium">{hall?.capacity} guests</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Attendees:</span>
+                        <span className="text-sm font-medium">{selectedBooking.attendees}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Date:</span>
+                        <span className="text-sm font-medium">{eventDate.toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Time:</span>
+                        <span className="text-sm font-medium">{startTime} - {endTime}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Duration:</span>
+                        <span className="text-sm font-medium">{hours} hour{hours !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Rate:</span>
+                        <span className="text-sm font-medium">{formatCurrency(hall?.rate || 0)} per hour</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Charges Table */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Charges</h3>
+                <table className="w-full border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-900">Description</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-900">Quantity</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-900">Rate</th>
+                      <th className="border border-gray-300 px-4 py-2 text-right text-sm font-medium text-gray-900">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
+                        {hall?.name} - Banquet Hall Rental
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
+                        {hours} hour{hours !== 1 ? 's' : ''}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
+                        {formatCurrency(hall?.rate || 0)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900 text-right">
+                        {formatCurrency(selectedBooking.totalAmount, selectedBooking.currency)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="mb-6">
+                <div className="flex justify-end">
+                  <div className="w-80">
+                    <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Subtotal:</span>
+                        <span className="text-sm font-medium">{formatCurrency(subtotal, selectedBooking.currency)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Tax ({(taxRate * 100).toFixed(0)}%):</span>
+                        <span className="text-sm font-medium">{formatCurrency(taxAmount, selectedBooking.currency)}</span>
+                      </div>
+                      <div className="border-t border-gray-300 pt-2">
+                        <div className="flex justify-between">
+                          <span className="text-lg font-bold text-gray-900">Total Amount:</span>
+                          <span className="text-lg font-bold text-gray-900">{formatCurrency(grandTotal, selectedBooking.currency)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Information */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm text-green-700">
+                    <span className="font-medium">Payment Terms:</span> 50% deposit required to confirm booking. Balance due 7 days before event.
+                  </p>
+                  <p className="text-sm text-green-700 mt-2">
+                    <span className="font-medium">Payment Methods:</span> Bank Transfer, Credit Card, Cash
+                  </p>
+                  <p className="text-sm text-green-700 mt-2">
+                    <span className="font-medium">Bank Details:</span> Account Name: {branding.hotelName}, Account Number: XXXX-XXXX-XXXX-XXXX
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t-2 border-gray-300 pt-6 mt-8">
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Thank You!</h4>
+                    <p className="text-sm text-gray-600">
+                      Thank you for choosing {branding.hotelName} for your event. We look forward to making it a memorable occasion.
+                    </p>
+                    <div className="mt-4">
+                      <h5 className="font-medium text-gray-900 text-sm">Cancellation Policy:</h5>
+                      <p className="text-xs text-gray-600 mt-1">Cancellations made 30 days or more before the event date will receive a full refund of the deposit. Cancellations made less than 30 days before the event will forfeit the deposit.</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">
+                      <p>Questions about this invoice?</p>
+                      <p>Contact us at:</p>
+                      <p className="font-medium">{branding.contact.phone}</p>
+                      <p className="font-medium">{branding.contact.email}</p>
+                    </div>
+                    <div className="mt-4 text-xs text-gray-500">
+                      <p>Invoice generated on {invoiceDate}</p>
+                      <p>by {user?.name} - {user?.role}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {showEmailForm && <EmailForm />}
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -1126,7 +1182,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-gray-900">{hall.name}</h3>
-                  <span className="text-lg font-semibold text-green-600">{formatCurrency(hall.rate, hotelSettings.baseCurrency)}/hour</span>
+                  <span className="text-lg font-semibold text-green-600">{formatCurrency(hall.rate)}/hour</span>
                 </div>
                 
                 <div className="flex items-center space-x-4 mb-4">
@@ -1236,15 +1292,23 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                         {formatCurrency(booking.totalAmount, booking.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button 
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setShowInvoiceModal(true);
-                          }}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          View Invoice
-                        </button>
+                        <div className="flex space-x-2">
+                          <button 
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowInvoiceModal(true);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            View Invoice
+                          </button>
+                          <button 
+                            onClick={() => setShowChargeForm(true)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Bill to Room
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
