@@ -48,7 +48,8 @@ import {
   UserPlus,
   ChevronDown,
   ChevronUp,
-  Info
+  Info,
+  Settings
 } from 'lucide-react';
 import { Room, Booking, Guest, RoomCharge } from '../types';
 
@@ -2579,7 +2580,7 @@ export function RoomsModule({ filters }: RoomsModuleProps) {
                       </button>
                     )}
                     
-                    {currentBooking && currentBooking.status === 'checked-in' && (
+                    {currentBook && currentBooking.status === 'checked-in' && (
                       <button
                         onClick={() => {
                           setSelectedBooking(currentBooking);
