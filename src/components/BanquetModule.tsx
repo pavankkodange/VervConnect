@@ -782,7 +782,7 @@ export function BanquetModule({ filters }: BanquetModuleProps) {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${booking.totalAmount.toFixed(2)} {booking.currency}
+                        {formatCurrency(booking.totalAmount, booking.currency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <button 
