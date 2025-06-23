@@ -50,7 +50,7 @@ import {
 export function AdminModule() {
   const { users, addUser, updateUser, deleteUser, toggleUserStatus } = useAuth();
   const { branding, updateBranding } = useBranding();
-  const { currencies, hotelSettings, updateHotelSettings } = useCurrency();
+  const { currencies, hotelSettings, updateHotelSettings, formatCurrency } = useCurrency();
   const { securityLogs, auditLogs, accessControls, complianceReports, generateComplianceReport } = useSecurity();
   
   const [activeTab, setActiveTab] = useState<'users' | 'branding' | 'shifts' | 'rooms' | 'banquet' | 'tables' | 'system' | 'reports' | 'security'>('users');
