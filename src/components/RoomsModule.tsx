@@ -5,34 +5,7 @@ import { useBranding } from '../context/BrandingContext';
 import { useAuth } from '../context/AuthContext';
 import { BillGenerator } from './BillGenerator';
 import { RoomManagement } from './RoomManagement';
-import { 
-  Bed, 
-  Calendar, 
-  Plus, 
-  Search, 
-  Filter, 
-  CheckCircle, 
-  X, 
-  User, 
-  Mail, 
-  Phone, 
-  Clock, 
-  CreditCard, 
-  Save, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  ArrowRight, 
-  ArrowLeft, 
-  Home, 
-  Users, 
-  DollarSign, 
-  FileText, 
-  AlertCircle, 
-  Upload,
-  Globe,
-  Passport
-} from 'lucide-react';
+import { Bed, Calendar, Plus, Search, Filter, CheckCircle, X, User, Mail, Phone, Clock, CreditCard, Save, Edit, Trash2, Eye, ArrowRight, ArrowLeft, Home, Users, DollarSign, FileText, AlertCircle, Upload, Globe, Import as Passport } from 'lucide-react';
 import { Room, Guest, Booking } from '../types';
 
 interface RoomsModuleProps {
